@@ -13,7 +13,7 @@ Ensure you have [Node.js](https://nodejs.org/) installed on your machine.
 
 2. **Navigate into the project directory:**
    ```bash
-   cd vite_web_app
+   cd Web-App-Calidad-de-Aire-e-Industrias
    ```
 
 3. **Install dependencies:**
