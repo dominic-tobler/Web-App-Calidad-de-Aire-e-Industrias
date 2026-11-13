@@ -39,7 +39,7 @@ En el usuario experto hay cuatro frames y un shell fijo: mapa, rango temporal, f
 Se mantiene la decisión del README: D3 imperativo con `useRef`.
 
 - React renderiza el shell, los filtros, las leyendas, los rankings y el detalle de una estación.
-- D3 calcula escalas, ejes, trazos, zoom y brush, y actualiza el SVG del mapa y de cada gráfico.
+- D3 calcula escalas, ejes, trazos y brush, y actualiza el SVG de cada gráfico. El mapa lo dibuja Leaflet.
 - Las cuentas no viven en los componentes. Vecino más cercano, perfiles horarios, correlaciones, porcentajes por banda y cobertura son funciones puras en la capa de datos. Los gráficos reciben arreglos ya reducidos.
 
 `src/App.tsx` y `src/ScatterPlot.tsx` son la plantilla de Vite. No se extienden para los dashboards.
@@ -61,11 +61,11 @@ El tiempo y los filtros son la consulta global. En el experto, el recuadro defin
 
 Los municipios están dibujados en Figma como vectores sueltos. Esa geometría no se usa como fuente del mapa.
 
-El mapa es un componente `CundinamarcaMap`:
+El mapa es un componente `CundinamarcaMap` montado con Leaflet:
 
-- Base: GeoJSON de municipios de Cundinamarca proyectado con `d3.geoMercator` y ajustado al SVG.
+- Base: teselas claras de Esri y, encima, el GeoJSON de municipios de Cundinamarca.
 - Capas independientes: municipios, estaciones (círculos), industrias (símbolos por estado), brush y enlaces de proximidad.
-- Zoom y desplazamiento con `d3.zoom`, equivalentes a los controles del frame.
+- Zoom y desplazamiento con Leaflet, con los mismos controles del frame.
 
 Así las coordenadas de `industries.json` y de las estaciones caen en el lugar correcto.
 

@@ -4,10 +4,11 @@ type CalendarGridProps = {
   year: number
   month: number
   day: number
+  markedDays?: readonly number[]
   onDay: (day: number) => void
 }
 
-export function CalendarGrid({ year, month, day, onDay }: CalendarGridProps) {
+export function CalendarGrid({ year, month, day, markedDays = [], onDay }: CalendarGridProps) {
   const cells = calendarCells(year, month)
 
   return (
@@ -27,7 +28,7 @@ export function CalendarGrid({ year, month, day, onDay }: CalendarGridProps) {
                 <button
                   key={value}
                   type="button"
-                  className={value === day ? "day is-selected" : "day"}
+                  className={dayClass(value, day, markedDays)}
                   onClick={() => onDay(value)}
                   aria-pressed={value === day}
                 >
@@ -40,4 +41,11 @@ export function CalendarGrid({ year, month, day, onDay }: CalendarGridProps) {
       </div>
     </div>
   )
+}
+
+function dayClass(value: number, selected: number, markedDays: readonly number[]): string {
+  const classes = ["day"]
+  if (value === selected) classes.push("is-selected")
+  if (markedDays.includes(value)) classes.push("has-data")
+  return classes.join(" ")
 }

@@ -24,6 +24,7 @@ export type CommonState = {
   analysisMode: AnalysisMode
   mapExpanded: boolean
   playing: boolean
+  selectedStationId: string | null
 }
 
 type CommonContextValue = {
@@ -38,6 +39,7 @@ type CommonContextValue = {
   setAnalysisMode: (mode: AnalysisMode) => void
   setMapExpanded: (expanded: boolean) => void
   setPlaying: (playing: boolean) => void
+  setSelectedStation: (id: string | null) => void
   shiftMonth: (delta: number) => void
 }
 
@@ -46,14 +48,15 @@ const CommonContext = createContext<CommonContextValue | null>(null)
 const initialState: CommonState = {
   year: 2024,
   month: 0,
-  day: 1,
+  day: 22,
   hour: 19,
-  pollutant: "ica",
+  pollutant: "pm25",
   source: "todos",
   view: "exploracion",
   analysisMode: "dispersion",
   mapExpanded: false,
   playing: false,
+  selectedStationId: null,
 }
 
 export function CommonStateProvider({ children }: { children: ReactNode }) {
@@ -88,6 +91,12 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
       setAnalysisMode: (analysisMode) => patch({ analysisMode }),
       setMapExpanded: (mapExpanded) => patch({ mapExpanded }),
       setPlaying: (playing) => patch({ playing }),
+      setSelectedStation: (id) => {
+        setState((current) => ({
+          ...current,
+          selectedStationId: id !== null && current.selectedStationId === id ? null : id,
+        }))
+      },
       shiftMonth: (delta) => {
         setState((current) => {
           const cursor = current.year * 12 + current.month + delta

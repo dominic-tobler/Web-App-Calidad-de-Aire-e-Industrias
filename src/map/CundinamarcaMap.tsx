@@ -1,12 +1,45 @@
 import { useEffect, useRef, useState } from "react"
-import * as d3 from "d3"
-import { municipalities, type MunicipalityFeature } from "../data/municipalities"
+import {
+  circleMarker,
+  divIcon,
+  geoJSON,
+  latLngBounds,
+  type LatLngBounds,
+  layerGroup,
+  map as createMap,
+  marker,
+  polyline,
+  tileLayer,
+  type LayerGroup,
+  type Map as LeafletMap,
+  type Path,
+} from "leaflet"
+import "leaflet/dist/leaflet.css"
+import { municipalities } from "../data/municipalities"
+import {
+  airQualityLevel,
+  formatReading,
+  pollutantLabel,
+  type Pollutant,
+} from "../domain/airQuality"
 import { formatPlace, statusLabel, type Industry } from "../domain/industry"
+import {
+  stationStatusLabel,
+  stationTitle,
+  type Station,
+  type StationLink,
+} from "../domain/station"
 
 type CundinamarcaMapProps = {
   industries: Industry[]
+  stations: Station[]
+  selectedStationId: string | null
+  links: StationLink[]
   hourLabel: string
+  pollutant: Pollutant
+  readings: Record<string, number>
   showHourBadge?: boolean
+  onSelectStation: (id: string | null) => void
 }
 
 const STATUS_FILL = {
@@ -15,154 +48,265 @@ const STATUS_FILL = {
   tramite: "#243830",
 } as const
 
+const STAR_PATH = "M6 0.7 7.5 4.3 11.3 4.5 8.3 7 9.3 10.8 6 8.8 2.7 10.8 3.7 7 0.7 4.5 4.5 4.3Z"
+
+const ICONS = {
+  sancionada: starIcon(STATUS_FILL.sancionada),
+  seguimiento: starIcon(STATUS_FILL.seguimiento),
+  tramite: starIcon(STATUS_FILL.tramite),
+}
+
 export function CundinamarcaMap({
   industries,
+  stations,
+  selectedStationId,
+  links,
   hourLabel,
+  pollutant,
+  readings,
   showHourBadge = false,
+  onSelectStation,
 }: CundinamarcaMapProps) {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
-  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
-  const projectionRef = useRef<d3.GeoProjection | null>(null)
-  const transformRef = useRef(d3.zoomIdentity)
-  const industriesRef = useRef(industries)
-  const drawIndustriesRef = useRef<() => void>(() => {})
-  const [size, setSize] = useState({ width: 0, height: 0 })
-  const [hover, setHover] = useState<{ industry: Industry; x: number; y: number } | null>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<LeafletMap | null>(null)
+  const industriesLayerRef = useRef<LayerGroup | null>(null)
+  const linksLayerRef = useRef<LayerGroup | null>(null)
+  const stationsLayerRef = useRef<LayerGroup | null>(null)
+  const overviewBoundsRef = useRef<LatLngBounds | null>(null)
+  const hadSelectionRef = useRef(false)
+  const selectStationRef = useRef(onSelectStation)
   const [municipality, setMunicipality] = useState<string | null>(null)
 
   useEffect(() => {
-    const element = wrapRef.current
-    if (!element) return
-    const observer = new ResizeObserver(() => {
-      const rect = element.getBoundingClientRect()
-      setSize({ width: rect.width, height: rect.height })
+    selectStationRef.current = onSelectStation
+  }, [onSelectStation])
+
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host || mapRef.current) return
+
+    const map = createMap(host, {
+      zoomControl: false,
+      zoomAnimation: false,
+      fadeAnimation: false,
+      minZoom: 6,
+      maxZoom: 18,
+      center: [5, -74.1],
+      zoom: 8,
     })
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
 
-  useEffect(() => {
-    const svgElement = svgRef.current
-    if (!svgElement || size.width < 40 || size.height < 40) return
+    tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+      {
+        attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+        maxZoom: 18,
+        maxNativeZoom: 16,
+      },
+    ).addTo(map)
 
-    const svg = d3.select(svgElement)
-    svg.selectAll("*").remove()
-    transformRef.current = d3.zoomIdentity
-
-    const projection = d3.geoMercator().fitExtent(
-      [
-        [18, 48],
-        [size.width - 52, size.height - 120],
-      ],
-      municipalities,
-    )
-    projectionRef.current = projection
-    const path = d3.geoPath(projection)
-
-    const root = svg.append("g").attr("class", "map-root")
-    root
-      .append("g")
-      .attr("class", "municipalities")
-      .selectAll("path")
-      .data(municipalities.features)
-      .join("path")
-      .attr("d", (feature: MunicipalityFeature) => path(feature) ?? "")
-      .attr("fill", "#f7faf8")
-      .attr("stroke", "#d3ddd7")
-      .attr("stroke-width", 0.8)
-      .on("mouseenter", function (_, feature: MunicipalityFeature) {
-        d3.select(this).attr("fill", "#e5f0ea")
-        setMunicipality(formatPlace(feature.properties.name))
-      })
-      .on("mouseleave", function () {
-        d3.select(this).attr("fill", "#f7faf8")
-        setMunicipality(null)
-      })
-
-    root.append("g").attr("class", "industries")
-
-    const zoom = d3
-      .zoom<SVGSVGElement, unknown>()
-      .scaleExtent([1, 10])
-      .on("zoom", (event) => {
-        transformRef.current = event.transform
-        root.attr("transform", event.transform.toString())
-        root
-          .selectAll(".municipalities path")
-          .attr("stroke-width", 0.8 / event.transform.k)
-        drawIndustriesRef.current()
-      })
-
-    zoomRef.current = zoom
-    svg.call(zoom)
-    drawIndustriesRef.current()
-  }, [size])
-
-  useEffect(() => {
-    industriesRef.current = industries
-    drawIndustriesRef.current = () => {
-      const svgElement = svgRef.current
-      const projection = projectionRef.current
-      if (!svgElement || !projection) return
-
-      const scale = 1 / transformRef.current.k
-      const symbol = d3.symbol<Industry>().type(d3.symbolStar).size(46)
-      const layer = d3.select(svgElement).select<SVGGElement>("g.industries")
-      if (layer.empty()) return
-
-      layer
-        .selectAll<SVGPathElement, Industry>("path")
-        .data(industriesRef.current, (industry) => industry.id)
-        .join("path")
-        .attr("d", symbol)
-        .attr("fill", (industry) => STATUS_FILL[industry.status])
-        .attr("stroke", "#ffffff")
-        .attr("stroke-width", 0.6)
-        .attr("transform", (industry) => {
-          const point = projection([industry.longitude, industry.latitude])
-          if (!point) return "translate(-100,-100)"
-          return `translate(${point[0]},${point[1]}) scale(${scale})`
+    const boundaries = geoJSON(municipalities, {
+      style: {
+        color: "#6e857a",
+        weight: 1,
+        fillColor: "#1a3c32",
+        fillOpacity: 0.12,
+      },
+      onEachFeature(feature, layer) {
+        const name = feature.properties?.name
+        if (!name || !isPath(layer)) return
+        layer.on("mouseover", () => {
+          layer.setStyle({ fillOpacity: 0.28, weight: 1.8, color: "#1a3c32" })
+          setMunicipality(formatPlace(name))
         })
-        .style("cursor", "pointer")
-        .on("mouseenter", (event, industry) => {
-          const rect = wrapRef.current?.getBoundingClientRect()
-          if (!rect) return
-          setHover({
-            industry,
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top,
-          })
+        layer.on("mouseout", () => {
+          boundaries.resetStyle(layer)
+          setMunicipality(null)
         })
-        .on("mouseleave", () => setHover(null))
+      },
+    }).addTo(map)
+
+    const bounds = boundaries.getBounds().pad(0)
+    for (const station of stations) bounds.extend([station.latitude, station.longitude])
+    overviewBoundsRef.current = bounds
+    map.createPane("industries")
+    map.createPane("station-links")
+    map.createPane("stations")
+    const industriesPane = map.getPane("industries")
+    const linksPane = map.getPane("station-links")
+    const stationsPane = map.getPane("stations")
+    if (industriesPane) industriesPane.style.zIndex = "410"
+    if (linksPane) linksPane.style.zIndex = "420"
+    if (stationsPane) stationsPane.style.zIndex = "430"
+
+    industriesLayerRef.current = layerGroup().addTo(map)
+    linksLayerRef.current = layerGroup().addTo(map)
+    stationsLayerRef.current = layerGroup().addTo(map)
+    map.on("click", () => selectStationRef.current(null))
+    mapRef.current = map
+
+    const fit = () => {
+      if (host.clientWidth < 40 || host.clientHeight < 40 || !bounds.isValid()) return false
+      map.invalidateSize()
+      map.fitBounds(bounds, {
+        paddingTopLeft: [28, 52],
+        paddingBottomRight: [28, 96],
+      })
+      return true
     }
 
-    drawIndustriesRef.current()
-  }, [industries, size])
+    let fitted = fit()
+    const observer = new ResizeObserver(() => {
+      if (!fitted) {
+        fitted = fit()
+        return
+      }
+      map.invalidateSize()
+    })
+    observer.observe(host)
 
-  const zoomBy = (factor: number) => {
-    const svgElement = svgRef.current
-    const zoom = zoomRef.current
-    if (!svgElement || !zoom) return
-    d3.select(svgElement).transition().duration(180).call(zoom.scaleBy, factor)
+    return () => {
+      observer.disconnect()
+      map.remove()
+      mapRef.current = null
+      industriesLayerRef.current = null
+      linksLayerRef.current = null
+      stationsLayerRef.current = null
+    }
+  }, [stations])
+
+  useEffect(() => {
+    const layer = industriesLayerRef.current
+    if (!layer) return
+
+    layer.clearLayers()
+    for (const industry of industries) {
+      marker([industry.latitude, industry.longitude], {
+        pane: "industries",
+        icon: ICONS[industry.status],
+        title: formatPlace(industry.municipality),
+        keyboard: true,
+      })
+        .bindTooltip(tooltipHtml(industry), {
+          direction: "top",
+          offset: [0, -8],
+          opacity: 1,
+          className: "industry-tooltip",
+        })
+        .addTo(layer)
+    }
+  }, [industries])
+
+  useEffect(() => {
+    const layer = linksLayerRef.current
+    const station = stations.find((item) => item.id === selectedStationId)
+    if (!layer) return
+
+    layer.clearLayers()
+    if (!station) return
+
+    for (const link of links) {
+      polyline(
+        [
+          [station.latitude, station.longitude],
+          [link.industry.latitude, link.industry.longitude],
+        ],
+        {
+          pane: "station-links",
+          color: "#1a3c32",
+          weight: 2,
+          opacity: 0.9,
+          interactive: false,
+        },
+      ).addTo(layer)
+    }
+  }, [links, selectedStationId, stations])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const station = stations.find((item) => item.id === selectedStationId)
+
+    if (station && links.length > 0) {
+      const focus = latLngBounds([
+        [station.latitude, station.longitude],
+        [station.latitude, station.longitude],
+      ])
+      for (const link of links) {
+        focus.extend([link.industry.latitude, link.industry.longitude])
+      }
+      map.fitBounds(focus, {
+        paddingTopLeft: [36, 48],
+        paddingBottomRight: [36, 108],
+        maxZoom: 15,
+        animate: false,
+      })
+      hadSelectionRef.current = true
+      return
+    }
+
+    if (hadSelectionRef.current && overviewBoundsRef.current) {
+      map.fitBounds(overviewBoundsRef.current, {
+        paddingTopLeft: [28, 52],
+        paddingBottomRight: [28, 96],
+        animate: false,
+      })
+      hadSelectionRef.current = false
+    }
+  }, [links, selectedStationId, stations])
+
+  useEffect(() => {
+    const layer = stationsLayerRef.current
+    if (!layer) return
+
+    layer.clearLayers()
+    for (const station of stations) {
+      const selected = station.id === selectedStationId
+      const value = readings[station.id]
+      const level = value == null ? null : airQualityLevel(pollutant, value)
+      const point = circleMarker([station.latitude, station.longitude], {
+        pane: "stations",
+        radius: selected ? 8 : 6,
+        color: "#1a3c32",
+        weight: selected ? 3 : 2,
+        fillColor: level?.color ?? (selected ? "#1a3c32" : "#ffffff"),
+        fillOpacity: 1,
+        bubblingMouseEvents: false,
+      })
+      point.on("click", () => selectStationRef.current(station.id))
+      point.bindTooltip(stationTooltipHtml(station, readingDetail(pollutant, value)), {
+        direction: "top",
+        offset: [0, -8],
+        opacity: 1,
+        className: "station-tooltip",
+      })
+      point.addTo(layer)
+      if (selected) point.bringToFront()
+    }
+  }, [pollutant, readings, selectedStationId, stations])
+
+  const zoomBy = (direction: "in" | "out") => {
+    const map = mapRef.current
+    if (!map) return
+    const next = map.getZoom() + (direction === "in" ? 1 : -1)
+    map.setZoom(next)
   }
 
-  const tooltipLeft = hover ? Math.min(hover.x + 12, Math.max(size.width - 230, 8)) : 0
-  const tooltipTop = hover ? Math.max(hover.y - 72, 8) : 0
-
   return (
-    <div className="map-frame" ref={wrapRef}>
-      <svg ref={svgRef} role="img" aria-label="Mapa de Cundinamarca con fuentes de emisión">
-        <title>Mapa de Cundinamarca</title>
-      </svg>
+    <div className="map-frame">
+      <div
+        ref={hostRef}
+        className="leaflet-host"
+        role="application"
+        aria-label="Mapa de Cundinamarca con estaciones de calidad del aire y fuentes de emisión"
+      />
 
       {showHourBadge && <div className="hour-badge">Hora {hourLabel}</div>}
 
       <div className="map-zoom">
-        <button type="button" onClick={() => zoomBy(1.4)} aria-label="Acercar mapa">
+        <button type="button" onClick={() => zoomBy("in")} aria-label="Acercar mapa">
           +
         </button>
-        <button type="button" onClick={() => zoomBy(1 / 1.4)} aria-label="Alejar mapa">
+        <button type="button" onClick={() => zoomBy("out")} aria-label="Alejar mapa">
           −
         </button>
       </div>
@@ -190,31 +334,58 @@ export function CundinamarcaMap({
           </div>
         </div>
       </div>
-
-      {hover && (
-        <div className="map-tooltip" style={{ left: tooltipLeft, top: tooltipTop }}>
-          <strong>
-            {formatPlace(hover.industry.municipality)}
-            {hover.industry.vereda ? ` · ${formatPlace(hover.industry.vereda)}` : ""}
-          </strong>
-          <span>{hover.industry.sourceRaw || "Fuente sin tipo"}</span>
-          <span>
-            {hover.industry.fuel} · {statusLabel(hover.industry.status)}
-          </span>
-          <span>Expediente {hover.industry.expediente}</span>
-        </div>
-      )}
     </div>
   )
+}
+
+function isPath(layer: unknown): layer is Path {
+  return typeof layer === "object" && layer !== null && "setStyle" in layer
+}
+
+function starIcon(fill: string) {
+  return divIcon({
+    className: "industry-marker",
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    html: `<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path fill="${fill}" stroke="#ffffff" stroke-width="0.6" d="${STAR_PATH}"/></svg>`,
+  })
+}
+
+function stationTooltipHtml(station: Station, detail: string) {
+  const place = station.municipality
+    ? escapeHtml(formatPlace(station.municipality))
+    : "Municipio sin asignar"
+  return `<strong>${escapeHtml(stationTitle(station))}</strong><span>${place}</span><span>${escapeHtml(stationStatusLabel(station))}</span><span>${escapeHtml(detail)}</span>`
+}
+
+function readingDetail(pollutant: Pollutant, value: number | undefined): string {
+  if (value == null) return "Sin medición a esta hora"
+  const level = airQualityLevel(pollutant, value)
+  const band = level ? ` · ${level.label}` : ""
+  return `${pollutantLabel(pollutant)} ${formatReading(value)}${band}`
+}
+
+function tooltipHtml(industry: Industry) {
+  const place = escapeHtml(formatPlace(industry.municipality))
+  const vereda = industry.vereda ? ` · ${escapeHtml(formatPlace(industry.vereda))}` : ""
+  const source = escapeHtml(industry.sourceRaw || "Fuente sin tipo")
+  const fuel = escapeHtml(industry.fuel)
+  const status = escapeHtml(statusLabel(industry.status))
+  return `<strong>${place}${vereda}</strong><span>${source}</span><span>${fuel} · ${status}</span><span>Expediente ${industry.expediente}</span>`
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
 }
 
 function StarIcon({ fill }: { fill: string }) {
   return (
     <svg className="star-icon" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-      <path
-        fill={fill}
-        d="M6 0.7 7.5 4.3 11.3 4.5 8.3 7 9.3 10.8 6 8.8 2.7 10.8 3.7 7 0.7 4.5 4.5 4.3Z"
-      />
+      <path fill={fill} d={STAR_PATH} />
     </svg>
   )
 }
