@@ -45,6 +45,7 @@ Use ctrl + c to stop the local development server, or simply close the terminal
 | **React** | Core web framework handling UI components, page routing, and state management. |
 | **Vite** | Fast build tool and development server for React applications. |
 | **D3.js** | Data visualization library used for data transformations, scales, and direct SVG/Canvas rendering. |
+| **Leaflet** | Interactive map for Cundinamarca: tiled basemap, municipality boundaries, and industry markers. |
 
 ---
 
