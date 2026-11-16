@@ -1,14 +1,26 @@
+import type { CSSProperties } from "react"
+import type { AirQualityLevel } from "../domain/airQuality"
 import { calendarCells, WEEKDAYS } from "../domain/time"
 
 type CalendarGridProps = {
   year: number
   month: number
-  day: number
+  day: number | null
   markedDays?: readonly number[]
+  dayLevels?: Readonly<Record<number, AirQualityLevel>>
   onDay: (day: number) => void
 }
 
-export function CalendarGrid({ year, month, day, markedDays = [], onDay }: CalendarGridProps) {
+const DARK_INK_LEVELS = new Set(["moderado", "alto", "muy-alto"])
+
+export function CalendarGrid({
+  year,
+  month,
+  day,
+  markedDays = [],
+  dayLevels = {},
+  onDay,
+}: CalendarGridProps) {
   const cells = calendarCells(year, month)
 
   return (
@@ -28,9 +40,12 @@ export function CalendarGrid({ year, month, day, markedDays = [], onDay }: Calen
                 <button
                   key={value}
                   type="button"
-                  className={dayClass(value, day, markedDays)}
+                  className={dayClass(value, day, markedDays, dayLevels[value])}
+                  style={dayStyle(dayLevels[value])}
                   onClick={() => onDay(value)}
-                  aria-pressed={value === day}
+                  aria-pressed={day !== null && value === day}
+                  aria-label={dayLabel(value, dayLevels[value])}
+                  title={dayLevels[value] ? `Nivel ${dayLevels[value].label}` : undefined}
                 >
                   {String(value).padStart(2, "0")}
                 </button>
@@ -43,9 +58,28 @@ export function CalendarGrid({ year, month, day, markedDays = [], onDay }: Calen
   )
 }
 
-function dayClass(value: number, selected: number, markedDays: readonly number[]): string {
+function dayClass(
+  value: number,
+  selected: number | null,
+  markedDays: readonly number[],
+  level: AirQualityLevel | undefined,
+): string {
   const classes = ["day"]
-  if (value === selected) classes.push("is-selected")
-  if (markedDays.includes(value)) classes.push("has-data")
+  if (selected !== null && value === selected) classes.push("is-selected")
+  if (level) classes.push("has-level")
+  else if (markedDays.includes(value)) classes.push("has-data")
   return classes.join(" ")
+}
+
+function dayStyle(level: AirQualityLevel | undefined): CSSProperties | undefined {
+  if (!level) return undefined
+  return {
+    backgroundColor: level.color,
+    color: DARK_INK_LEVELS.has(level.id) ? "#1a2420" : "#ffffff",
+  }
+}
+
+function dayLabel(value: number, level: AirQualityLevel | undefined): string {
+  const date = String(value).padStart(2, "0")
+  return level ? `${date}, nivel ${level.label}` : date
 }

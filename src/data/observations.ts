@@ -91,13 +91,37 @@ export function hourlySeries(
 }
 
 export function daysWithReadings(pollutant: Pollutant, year: number, month: number): number[] {
-  const days = new Set<number>()
+  return Object.keys(dailyAverageReadings(pollutant, year, month))
+    .map(Number)
+    .sort((left, right) => left - right)
+}
+
+// Misma cuenta que el nivel del día: media de las medias horarias.
+export function dailyAverageReadings(
+  pollutant: Pollutant,
+  year: number,
+  month: number,
+): Record<number, number> {
+  const hours = new Map<number, number[][]>()
   for (const reading of observations) {
-    if (reading.pollutant === pollutant && reading.year === year && reading.month === month) {
-      days.add(reading.day)
+    if (reading.pollutant !== pollutant || reading.year !== year || reading.month !== month) continue
+    let buckets = hours.get(reading.day)
+    if (!buckets) {
+      buckets = Array.from({ length: 24 }, () => [])
+      hours.set(reading.day, buckets)
     }
+    buckets[reading.hour].push(reading.value)
   }
-  return [...days].sort((left, right) => left - right)
+
+  const averages: Record<number, number> = {}
+  for (const [day, buckets] of hours) {
+    const hourly = buckets.map((values) =>
+      values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length,
+    )
+    const average = averageReading(hourly)
+    if (average != null) averages[day] = average
+  }
+  return averages
 }
 
 export function averageReading(values: Array<number | null>): number | null {

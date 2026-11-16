@@ -32,6 +32,7 @@ type CommonContextValue = {
   setYear: (year: Year) => void
   setMonth: (month: number) => void
   setDay: (day: number) => void
+  setDate: (year: Year, month: number, day: number) => void
   setHour: (hour: number) => void
   setPollutant: (pollutant: Pollutant) => void
   setSource: (source: SourceCategory) => void
@@ -84,6 +85,7 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
       setYear: (year) => patch({ year }),
       setMonth: (month) => patch({ month }),
       setDay: (day) => patch({ day }),
+      setDate: (year, month, day) => patch({ year, month, day }),
       setHour: (hour) => patch({ hour }),
       setPollutant: (pollutant) => patch({ pollutant }),
       setSource: (source) => patch({ source }),

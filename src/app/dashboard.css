@@ -248,6 +248,21 @@ select:focus-visible {
   background: var(--accent-soft);
 }
 
+.day.has-level {
+  font-weight: 600;
+}
+
+.day.has-level:hover {
+  filter: brightness(0.96);
+}
+
+.day.has-level.is-selected,
+.day.has-level.is-selected:hover {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 2px #ffffff;
+  filter: none;
+}
+
 .day.is-empty {
   visibility: hidden;
 }

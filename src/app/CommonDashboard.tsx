@@ -1,19 +1,26 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { HourlyTrend } from "../charts/HourlyTrend"
 import { industries } from "../data/industries"
 import {
   averageReading,
+  dailyAverageReadings,
   daysWithReadings,
   hourlySeries,
   readingAt,
   readingsAtHour,
 } from "../data/observations"
 import { nearestIndustries, stations } from "../data/stations"
-import { airQualityLevel, formatReading, pollutantLabel, type Pollutant } from "../domain/airQuality"
+import {
+  airQualityLevel,
+  formatReading,
+  pollutantLabel,
+  type AirQualityLevel,
+  type Pollutant,
+} from "../domain/airQuality"
 import { formatDistance } from "../domain/geo"
 import { formatPlace, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../domain/industry"
 import { stationStatusLabel, stationTitle } from "../domain/station"
-import { formatHour, formatInstant, MONTHS } from "../domain/time"
+import { formatHour, formatInstant, MONTHS, type Year } from "../domain/time"
 import { CundinamarcaMap } from "../map/CundinamarcaMap"
 import { useCommonState } from "../state/commonState"
 import { CalendarGrid } from "../ui/CalendarGrid"
@@ -21,8 +28,16 @@ import { EmissionFilters } from "../ui/EmissionFilters"
 import "./dashboard.css"
 
 export function CommonDashboard() {
-  const { state, setDay, setHour, setPollutant, setSelectedStation, setSource, shiftMonth } =
-    useCommonState()
+  const { state, setDate, setHour, setPollutant, setSelectedStation, setSource } = useCommonState()
+  const [calendar, setCalendar] = useState(() => ({ year: state.year, month: state.month }))
+
+  function shiftCalendar(delta: number) {
+    setCalendar((current) => {
+      const cursor = current.year * 12 + current.month + delta
+      if (cursor < 2024 * 12 || cursor > 2025 * 12 + 11) return current
+      return { year: Math.floor(cursor / 12) as Year, month: cursor % 12 }
+    })
+  }
 
   const visibleIndustries = useMemo(
     () =>
@@ -58,9 +73,15 @@ export function CommonDashboard() {
     [state.pollutant, state.year, state.month, state.day],
   )
   const markedDays = useMemo(
-    () => daysWithReadings(state.pollutant, state.year, state.month),
-    [state.pollutant, state.year, state.month],
+    () => daysWithReadings(state.pollutant, calendar.year, calendar.month),
+    [state.pollutant, calendar.year, calendar.month],
   )
+  const dayLevels = useMemo(
+    () => monthDayLevels(state.pollutant, calendar.year, calendar.month),
+    [state.pollutant, calendar.year, calendar.month],
+  )
+  const selectedDay =
+    calendar.year === state.year && calendar.month === state.month ? state.day : null
   const dayAverage = averageReading(daySeries)
   const dayLevel = dayAverage == null ? null : airQualityLevel(state.pollutant, dayAverage)
   const selectedReading = selectedStation
@@ -99,30 +120,31 @@ export function CommonDashboard() {
             <div className="month-nav">
               <button
                 type="button"
-                onClick={() => shiftMonth(-1)}
-                disabled={state.year === 2024 && state.month === 0}
+                onClick={() => shiftCalendar(-1)}
+                disabled={calendar.year === 2024 && calendar.month === 0}
                 aria-label="Mes anterior"
               >
                 ‹
               </button>
               <span>
-                {MONTHS[state.month]} {state.year}
+                {MONTHS[calendar.month]} {calendar.year}
               </span>
               <button
                 type="button"
-                onClick={() => shiftMonth(1)}
-                disabled={state.year === 2025 && state.month === 11}
+                onClick={() => shiftCalendar(1)}
+                disabled={calendar.year === 2025 && calendar.month === 11}
                 aria-label="Mes siguiente"
               >
                 ›
               </button>
             </div>
             <CalendarGrid
-              year={state.year}
-              month={state.month}
-              day={state.day}
+              year={calendar.year}
+              month={calendar.month}
+              day={selectedDay}
               markedDays={markedDays}
-              onDay={setDay}
+              dayLevels={dayLevels}
+              onDay={(day) => setDate(calendar.year, calendar.month, day)}
             />
             <div className="day-scale">
               <p>{dayLevel ? `Nivel del día · ${dayLevel.label}` : "Sin mediciones este día"}</p>
@@ -209,6 +231,19 @@ export function CommonDashboard() {
       </div>
     </div>
   )
+}
+
+function monthDayLevels(
+  pollutant: Pollutant,
+  year: number,
+  month: number,
+): Record<number, AirQualityLevel> {
+  const levels: Record<number, AirQualityLevel> = {}
+  for (const [day, value] of Object.entries(dailyAverageReadings(pollutant, year, month))) {
+    const level = airQualityLevel(pollutant, value)
+    if (level) levels[Number(day)] = level
+  }
+  return levels
 }
 
 function coverageMessage(pollutant: Pollutant, measured: number, hour: number): string {
