@@ -316,8 +316,8 @@
   "TipoCombustible": "Otros",
   "TipoFuenteEmision": "REACTOR",
   "Cuenca": null,
-  "Longitude": -40.5431040219577,
-  "Latitude": 11.876445941579393
+  "Longitude": -74.25335055536625,
+  "Latitude": 4.541230456176838
  },
  {
   "id": "facatativa-moyano-1",
@@ -556,8 +556,8 @@
   "TipoCombustible": "Gas",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.527334955878445,
-  "Latitude": 11.886868625331884
+  "Longitude": -74.23678578729584,
+  "Latitude": 4.556071076763664
  },
  {
   "id": "ricaurte-buenos_aires",
@@ -604,8 +604,8 @@
   "TipoCombustible": "NoAplica",
   "TipoFuenteEmision": "FILTRO MOLINO PENDULAR",
   "Cuenca": null,
-  "Longitude": -40.541236252072466,
-  "Latitude": 11.873641666430338
+  "Longitude": -74.25073063950748,
+  "Latitude": 4.538221947771539
  },
  {
   "id": "mosquera-serrezeluita",
@@ -636,8 +636,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Caldera",
   "Cuenca": null,
-  "Longitude": -40.543524257045355,
-  "Latitude": 11.879024648012846
+  "Longitude": -74.25425732884602,
+  "Latitude": 4.544205740274203
  },
  {
   "id": "soacha-canoas",
@@ -700,8 +700,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.50123088878086,
-  "Latitude": 11.869338952096133
+  "Longitude": -74.20368545702654,
+  "Latitude": 4.539586842990114
  },
  {
   "id": "facatativa-casco_urbano-1",
@@ -940,8 +940,8 @@
   "TipoCombustible": "Gas",
   "TipoFuenteEmision": "HORNO DE SECADO",
   "Cuenca": null,
-  "Longitude": -40.54120542623025,
-  "Latitude": 11.876105874947447
+  "Longitude": -74.25109630867082,
+  "Latitude": 4.541134841007961
  },
  {
   "id": "nemocon-patio_bonito-3",
@@ -1116,8 +1116,8 @@
   "TipoCombustible": "Gas",
   "TipoFuenteEmision": "Horno arcillas de Soacha tipo túnel",
   "Cuenca": null,
-  "Longitude": -40.50622069588541,
-  "Latitude": 11.892809469097637
+  "Longitude": -74.21329698580345,
+  "Latitude": 4.566489566949319
  },
  {
   "id": "tocancipa-canavita-1",
@@ -1308,8 +1308,8 @@
   "TipoCombustible": "Fuel Oil No.8",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.55375774565463,
-  "Latitude": 11.868159440984144
+  "Longitude": -74.26433947748662,
+  "Latitude": 4.529738181275102
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-1",
@@ -1516,8 +1516,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Caldera",
   "Cuenca": null,
-  "Longitude": -40.23297231681016,
-  "Latitude": 12.197747584705445
+  "Longitude": -73.94722294751965,
+  "Latitude": 4.971682883379586
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-13",
@@ -2124,8 +2124,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.52496757610384,
-  "Latitude": 11.893424590252797
+  "Longitude": -74.23511355783955,
+  "Latitude": 4.5641902516574655
  },
  {
   "id": "cajica-chuntame_alto-2",
@@ -2188,8 +2188,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "700 BHP VR2",
   "Cuenca": null,
-  "Longitude": -40.54427535733022,
-  "Latitude": 11.877707620662056
+  "Longitude": -74.25491262647121,
+  "Latitude": 4.542530680885112
  },
  {
   "id": "sibate-chusaca-3",
@@ -2204,8 +2204,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Caldera",
   "Cuenca": null,
-  "Longitude": -40.544317740285784,
-  "Latitude": 11.877682665770413
+  "Longitude": -74.25495764543618,
+  "Latitude": 4.542494409673359
  },
  {
   "id": "mosquera-san_jose-1",
@@ -2940,8 +2940,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -39.980202101042096,
-  "Latitude": 12.486339051750814
+  "Longitude": -73.70344449622603,
+  "Latitude": 5.356203734985391
  },
  {
   "id": "simijaca-centro-1",
@@ -2972,8 +2972,8 @@
   "TipoCombustible": "Leña",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.068676757927456,
-  "Latitude": 12.649001376707186
+  "Longitude": -73.83471355919738,
+  "Latitude": 5.533484001843519
  },
  {
   "id": "cucunuba-pueblo_viejo-3",
@@ -3084,8 +3084,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -39.961927994997,
-  "Latitude": 12.494483215224372
+  "Longitude": -73.68364040189024,
+  "Latitude": 5.3690040648557344
  },
  {
   "id": "guacheta-penas-4",
@@ -3116,8 +3116,8 @@
   "TipoCombustible": "Hulla",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.07735792030298,
-  "Latitude": 12.399667659923882
+  "Longitude": -73.80118943934406,
+  "Latitude": 5.236895511659578
  },
  {
   "id": "nemocon-patio_bonito-9",
@@ -3212,8 +3212,8 @@
   "TipoCombustible": "Gas",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.484171511604714,
-  "Latitude": 11.909820192451479
+  "Longitude": -74.19053255749695,
+  "Latitude": 4.590135039350111
  },
  {
   "id": "cajica-chuntame_alto-3",
@@ -3244,8 +3244,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.088128800437744,
-  "Latitude": 12.392064710900724
+  "Longitude": -73.81237783528367,
+  "Latitude": 5.226058157268051
  },
  {
   "id": "zipaquira-casco_urbano",
@@ -3276,8 +3276,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.084093932589056,
-  "Latitude": 12.392169363300315
+  "Longitude": -73.80771205564842,
+  "Latitude": 5.226869568015972
  },
  {
   "id": "tocancipa-verganzo-2",
@@ -3340,8 +3340,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -39.91823591503857,
-  "Latitude": 12.532648630538466
+  "Longitude": -73.63957046588779,
+  "Latitude": 5.421792710600199
  },
  {
   "id": "raquira-firita_pena_arriba-4",
@@ -3356,8 +3356,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -39.91861311187053,
-  "Latitude": 12.532413312508515
+  "Longitude": -73.63996741984025,
+  "Latitude": 5.42144840735822
  },
  {
   "id": "cogua-neusa-6",
@@ -3420,8 +3420,8 @@
   "TipoCombustible": "Carbón",
   "TipoFuenteEmision": "Horno",
   "Cuenca": null,
-  "Longitude": -40.499477931414525,
-  "Latitude": 11.875791834078868
+  "Longitude": -74.20270673873378,
+  "Latitude": 4.547487714142492
  },
  {
   "id": "lenguazaque-la_ramada-2",
@@ -3452,8 +3452,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.45972948803284,
-  "Latitude": 11.835708958384386
+  "Longitude": -74.15010205052799,
+  "Latitude": 4.506556557190856
  },
  {
   "id": "tocancipa-tibito-4",
@@ -5948,8 +5948,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.50382574042856,
-  "Latitude": 11.893244646186334
+  "Longitude": -74.21059346204403,
+  "Latitude": 4.567389923300631
  },
  {
   "id": "cajica-chuntame_alto-5",
@@ -6220,8 +6220,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.55152234074212,
-  "Latitude": 11.839800927934386
+  "Longitude": -74.25714172043331,
+  "Latitude": 4.496634299127183
  },
  {
   "id": "villapinzon-chinquira",
@@ -6396,8 +6396,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.48516600874105,
-  "Latitude": 11.897113354222794
+  "Longitude": -74.18960577229025,
+  "Latitude": 4.574971439139412
  },
  {
   "id": "simijaca-centro-4",
@@ -6476,8 +6476,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.485037333275365,
-  "Latitude": 11.893180796756923
+  "Longitude": -74.18881367614058,
+  "Latitude": 4.57034901181017
  },
  {
   "id": "girardot-casco_urbano-7",
@@ -6508,8 +6508,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.52570384182125,
-  "Latitude": 11.892328238762056
+  "Longitude": -74.2357873919548,
+  "Latitude": 4.56277756143587
  },
  {
   "id": "soacha-ciudadela_sucre-2",
@@ -6588,8 +6588,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.484331404849335,
-  "Latitude": 11.893054725311908
+  "Longitude": -74.18797504680683,
+  "Latitude": 4.570314209193959
  },
  {
   "id": "soacha-cazuca-3",
@@ -6876,8 +6876,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.485037333275365,
-  "Latitude": 11.893180796756923
+  "Longitude": -74.18881367614058,
+  "Latitude": 4.57034901181017
  },
  {
   "id": "fusagasuga-casco_urbano-7",
@@ -6988,8 +6988,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.520135914477116,
-  "Latitude": 11.892688097662209
+  "Longitude": -74.22939682905273,
+  "Latitude": 4.564100540111371
  },
  {
   "id": "ubate-guatancuy-2",
@@ -7212,8 +7212,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.58983141919419,
-  "Latitude": 12.377657742038346
+  "Longitude": -74.39069995575846,
+  "Latitude": 5.124379742857965
  },
  {
   "id": "cucunuba-pueblo_viejo-13",
@@ -7404,8 +7404,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -39.909139745298155,
-  "Latitude": 12.628916154098865
+  "Longitude": -73.64600667367809,
+  "Latitude": 5.537484218647725
  },
  {
   "id": "cota-siberia-4",
@@ -7484,8 +7484,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -39.89215111061938,
-  "Latitude": 12.540186981287942
+  "Longitude": -73.61057981823804,
+  "Latitude": 5.435252288176748
  },
  {
   "id": "chiquinquira-casco_urbano-4",
@@ -7500,8 +7500,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.03700460517995,
-  "Latitude": 12.717819293414454
+  "Longitude": -73.81018656495543,
+  "Latitude": 5.620426379271314
  },
  {
   "id": "lenguazaque-resguardo-3",
@@ -7580,8 +7580,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.15008618812934,
-  "Latitude": 12.363155860441339
+  "Longitude": -73.87929343115388,
+  "Latitude": 5.181310477990667
  },
  {
   "id": "soacha-casco_urbano-17",
@@ -7596,8 +7596,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.525813645038454,
-  "Latitude": 11.891706870918112
+  "Longitude": -74.23581315763053,
+  "Latitude": 4.562026510823876
  },
  {
   "id": "nemocon-oratorio-2",
@@ -7724,8 +7724,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.4843842547176,
-  "Latitude": 11.893345350902528
+  "Longitude": -74.1880838007089,
+  "Latitude": 4.570648820561472
  },
  {
   "id": "soacha-casco_urbano-19",
@@ -7740,8 +7740,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.484346076301314,
-  "Latitude": 11.893340189935346
+  "Longitude": -74.18803871629032,
+  "Latitude": 4.570648895329512
  },
  {
   "id": "cucunuba-penas-3",
@@ -7756,8 +7756,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.11778087864256,
-  "Latitude": 12.376951302863127
+  "Longitude": -73.84418432589199,
+  "Latitude": 5.20312166163478
  },
  {
   "id": "girardot-casco_urbano-13",
@@ -7788,8 +7788,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.51229008351135,
-  "Latitude": 11.937392727914547
+  "Longitude": -74.22762272841983,
+  "Latitude": 4.618130909896753
  },
  {
   "id": "girardot-casco_urbano-14",
@@ -7820,8 +7820,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.48463743101971,
-  "Latitude": 11.893203356467115
+  "Longitude": -74.18835396439313,
+  "Latitude": 4.570440258719016
  },
  {
   "id": "soacha-ciudadela_sucre-8",
@@ -7836,8 +7836,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.484928037479165,
-  "Latitude": 11.893127714153652
+  "Longitude": -74.18867834843374,
+  "Latitude": 4.570303994239461
  },
  {
   "id": "loc.usaquen_cerros_orientales-el_paramo",
@@ -7852,8 +7852,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.32456613104501,
-  "Latitude": 11.95485937679258
+  "Longitude": -74.01286671763792,
+  "Latitude": 4.669298064004053
  },
  {
   "id": "sutatausa-concubita",
@@ -7868,8 +7868,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.13288763470881,
-  "Latitude": 12.395775932897209
+  "Longitude": -73.8649627572091,
+  "Latitude": 5.2228297103741275
  },
  {
   "id": "sutatausa-penas_de_boqueron-8",
@@ -7900,8 +7900,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.54192296303177,
-  "Latitude": 11.878617265297784
+  "Longitude": -74.25233645929839,
+  "Latitude": 4.54398287614335
  },
  {
   "id": "girardot-casco_urbano-15",
@@ -7932,8 +7932,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.67227919497796,
-  "Latitude": 11.775733250206828
+  "Longitude": -74.38658954043598,
+  "Latitude": 4.401786928145538
  },
  {
   "id": "guacheta-rabanal-5",
@@ -7948,8 +7948,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -39.98290048487797,
-  "Latitude": 12.464820135083501
+  "Longitude": -73.70281900304515,
+  "Latitude": 5.330241512768043
  },
  {
   "id": "cucunuba-la_laguna",
@@ -7964,8 +7964,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.093870153447384,
-  "Latitude": 12.351408654103755
+  "Longitude": -73.81202603346752,
+  "Latitude": 5.176948123699539
  },
  {
   "id": "tabio-rio_frio_oriental-2",
@@ -7996,8 +7996,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.50423609665577,
-  "Latitude": 11.887782598020769
+  "Longitude": -74.21017679424838,
+  "Latitude": 4.560875812306026
  },
  {
   "id": "sutatausa-penas_de_boqueron-9",
@@ -8012,8 +8012,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.13338342602597,
-  "Latitude": 12.37492777182549
+  "Longitude": -73.86194122823592,
+  "Latitude": 5.198075331457736
  },
  {
   "id": "sutatausa-penas_de_boqueron-10",
@@ -8028,8 +8028,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.13248314762569,
-  "Latitude": 12.38210121791006
+  "Longitude": -73.86213351402192,
+  "Latitude": 5.20671702965842
  },
  {
   "id": "sutatausa-penas_de_boqueron-11",
@@ -8044,8 +8044,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.13348293566986,
-  "Latitude": 12.374674328912288
+  "Longitude": -73.86201300716012,
+  "Latitude": 5.19775851222903
  },
  {
   "id": "ricaurte-casco_urbano-1",
@@ -8124,8 +8124,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.509458854935865,
-  "Latitude": 11.91748011060211
+  "Longitude": -74.22108187921225,
+  "Latitude": 4.595087117895964
  },
  {
   "id": "guacheta-santuario-4",
@@ -8140,8 +8140,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -39.96634466411598,
-  "Latitude": 12.494670507400103
+  "Longitude": -73.68880441662374,
+  "Latitude": 5.368464344231938
  },
  {
   "id": "soacha-casco_urbano-21",
@@ -8156,8 +8156,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.51475630105776,
-  "Latitude": 11.899633632508623
+  "Longitude": -74.2242997401963,
+  "Latitude": 4.573166610362825
  },
  {
   "id": "soacha-panama-9",
@@ -8188,8 +8188,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.58000307733515,
-  "Latitude": 11.875723361916988
+  "Longitude": -74.29595826146928,
+  "Latitude": 4.534441463720205
  },
  {
   "id": "raquira-resguardo_oriente-2",
@@ -8220,8 +8220,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -41.03986651206761,
-  "Latitude": 11.744831463713686
+  "Longitude": -74.80615726088921,
+  "Latitude": 4.307486922629775
  },
  {
   "id": "simijaca-centro-7",
@@ -8236,8 +8236,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.073338374006326,
-  "Latitude": 12.635799463739822
+  "Longitude": -73.83778817693559,
+  "Latitude": 5.517055482056983
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_alto-4",
@@ -8252,8 +8252,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.45127430291233,
-  "Latitude": 11.854036434826499
+  "Longitude": -74.14328575236766,
+  "Latitude": 4.5295688068301
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-40",
@@ -8268,8 +8268,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.4509897375705,
-  "Latitude": 11.854181833372374
+  "Longitude": -74.1429795317441,
+  "Latitude": 4.529786456983502
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-41",
@@ -8284,8 +8284,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.451136201941715,
-  "Latitude": 11.854079065959459
+  "Longitude": -74.14313258524498,
+  "Latitude": 4.5296414376956005
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-42",
@@ -8300,8 +8300,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.45111581610063,
-  "Latitude": 11.853946127018672
+  "Longitude": -74.14308726111521,
+  "Latitude": 4.529487683545744
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-43",
@@ -8316,8 +8316,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.45131528361312,
-  "Latitude": 11.853965382848966
+  "Longitude": -74.14332167632664,
+  "Latitude": 4.529478264236179
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-44",
@@ -8332,8 +8332,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.45111581610063,
-  "Latitude": 11.853946127018672
+  "Longitude": -74.14308726111521,
+  "Latitude": 4.529487683545744
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-45",
@@ -8348,8 +8348,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.45111581610063,
-  "Latitude": 11.853946127018672
+  "Longitude": -74.14308726111521,
+  "Latitude": 4.529487683545744
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-46",
@@ -8364,8 +8364,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.4510166052324,
-  "Latitude": 11.853932740527783
+  "Longitude": -74.1429700463969,
+  "Latitude": 4.529487868894586
  },
  {
   "id": "tena-pena_negra",
@@ -8396,8 +8396,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.95720222518809,
-  "Latitude": 11.835968302032443
+  "Longitude": -74.72534715051044,
+  "Latitude": 4.427520483024398
  },
  {
   "id": "chiquinquira-sucre_oriental-2",
@@ -8444,8 +8444,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.06814162315663,
-  "Latitude": 12.593593579306695
+  "Longitude": -73.82432785547027,
+  "Latitude": 5.4680187022155655
  },
  {
   "id": "raquira-resguardo_occidente-3",
@@ -8460,8 +8460,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -39.91343021819183,
-  "Latitude": 12.627894124423952
+  "Longitude": -73.6508093646883,
+  "Latitude": 5.535524268555159
  },
  {
   "id": "villeta-casco_urbano",
@@ -8476,8 +8476,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.673198893295535,
-  "Latitude": 12.287815371037915
+  "Longitude": -74.47176619598085,
+  "Latitude": 5.004756319194306
  },
  {
   "id": "tausa-rasgata-13",
@@ -8508,8 +8508,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -39.89362833068098,
-  "Latitude": 12.629098826420629
+  "Longitude": -73.62801868648147,
+  "Latitude": 5.5404084621818095
  },
  {
   "id": "arbelaez-san_roque",
@@ -8556,8 +8556,8 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -41.043145003840884,
-  "Latitude": 11.73650302531465
+  "Longitude": -74.80862006091228,
+  "Latitude": 4.297195833751104
  },
  {
   "id": "localidad_de_ciudad_bolivar-mochuelo_bajo-47",
@@ -8572,7 +8572,7 @@
   "TipoCombustible": null,
   "TipoFuenteEmision": null,
   "Cuenca": null,
-  "Longitude": -40.459112476544,
-  "Latitude": 11.835281227311594
+  "Longitude": -74.14931700051052,
+  "Latitude": 4.506150614178572
  }
 ]
