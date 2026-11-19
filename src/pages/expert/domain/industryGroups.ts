@@ -1,5 +1,5 @@
-import rawIndustries from "../../../Data/industries.json"
-import { SOURCE_OPTIONS, type Industry, type IndustryStatus } from "../../domain/industry"
+import rawIndustries from "../../../../Data/industries.json"
+import { SOURCE_OPTIONS, type Industry, type IndustryStatus } from "../../../domain/industry"
 
 export const STATUS_OPTIONS: ReadonlyArray<{ id: IndustryStatus; label: string }> = [
   { id: "seguimiento", label: "En seguimiento" },

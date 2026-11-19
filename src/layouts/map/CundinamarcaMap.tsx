@@ -15,20 +15,21 @@ import {
   type Path,
 } from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { municipalities } from "../data/municipalities"
+import { municipalities } from "../../data/municipalities"
 import {
   airQualityLevel,
   formatReading,
   pollutantLabel,
   type Pollutant,
-} from "../domain/airQuality"
-import { formatPlace, statusLabel, type Industry } from "../domain/industry"
+} from "../../domain/airQuality"
+
+import { formatPlace, statusLabel, type Industry } from "../../domain/industry"
 import {
   stationStatusLabel,
   stationTitle,
   type Station,
   type StationLink,
-} from "../domain/station"
+} from "../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "./industryMarkers"
 
 type CundinamarcaMapProps = {

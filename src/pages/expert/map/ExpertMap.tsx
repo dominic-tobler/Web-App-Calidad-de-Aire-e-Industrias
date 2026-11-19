@@ -17,10 +17,10 @@ import {
   type Rectangle,
 } from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { municipalities } from "../../data/municipalities"
-import { formatPlace, statusLabel, type Industry } from "../../domain/industry"
-import { stationStatusLabel, stationTitle, type Station } from "../../domain/station"
-import { STAR_PATH, STATUS_FILL } from "../../map/industryMarkers"
+import { municipalities } from "../../../data/municipalities"
+import { formatPlace, statusLabel, type Industry } from "../../../domain/industry"
+import { stationStatusLabel, stationTitle, type Station } from "../../../domain/station"
+import { STAR_PATH, STATUS_FILL } from "../../../layouts/map/industryMarkers"
 import type { GeoBox } from "../domain/geoBox"
 
 

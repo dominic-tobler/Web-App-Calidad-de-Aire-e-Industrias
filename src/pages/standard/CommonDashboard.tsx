@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
-import { HourlyTrend } from "../charts/HourlyTrend"
-import { industries } from "../data/industries"
+import { HourlyTrend } from "../../charts/HourlyTrend"
+import { industries } from "../../data/industries"
 import {
   averageReading,
   dailyAverageReadings,
@@ -8,23 +8,23 @@ import {
   hourlySeries,
   readingAt,
   readingsAtHour,
-} from "../data/observations"
-import { nearestIndustries, stations } from "../data/stations"
+} from "../../data/observations"
+import { nearestIndustries, stations } from "../../data/stations"
 import {
   airQualityLevel,
   formatReading,
   pollutantLabel,
   type AirQualityLevel,
   type Pollutant,
-} from "../domain/airQuality"
-import { formatDistance } from "../domain/geo"
-import { formatPlace, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../domain/industry"
-import { stationStatusLabel, stationTitle } from "../domain/station"
-import { formatHour, formatInstant, MONTHS, type Year } from "../domain/time"
-import { CundinamarcaMap } from "../map/CundinamarcaMap"
-import { useCommonState } from "../state/commonState"
-import { CalendarGrid } from "../ui/CalendarGrid"
-import { EmissionFilters } from "../ui/EmissionFilters"
+} from "../../domain/airQuality"
+import { formatDistance } from "../../domain/geo"
+import { formatPlace, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../../domain/industry"
+import { stationStatusLabel, stationTitle } from "../../domain/station"
+import { formatHour, formatInstant, MONTHS, type Year } from "../../domain/time"
+import { CundinamarcaMap } from "../../layouts/map/CundinamarcaMap"
+import { useCommonState } from "../../state/commonState"
+import { CalendarGrid } from "../../layouts/CalendarGrid"
+import { EmissionFilters } from "../../layouts/EmissionFilters"
 import "./dashboard.css"
 
 export function CommonDashboard() {

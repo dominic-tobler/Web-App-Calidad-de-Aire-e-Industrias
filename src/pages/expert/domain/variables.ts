@@ -1,4 +1,4 @@
-import { airQualityLevel, type AirQualityLevel, type Pollutant } from "../../domain/airQuality"
+import { airQualityLevel, type AirQualityLevel, type Pollutant } from "../../../domain/airQuality"
 
 // Variables de datos_24_25.csv. `code` es el nombre de la columna `variable`.
 export const VARIABLES = [

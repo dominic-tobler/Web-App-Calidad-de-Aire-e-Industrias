@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import * as d3 from "d3"
-import { AIR_QUALITY_LEVELS, THRESHOLDS } from "../../domain/airQuality"
+import { AIR_QUALITY_LEVELS, THRESHOLDS } from "../../../domain/airQuality"
 import { hourToDate, type SeriesPoint, type StationSeries } from "../data/measurements"
 import { variableById, type VariableId } from "../domain/variables"
 
