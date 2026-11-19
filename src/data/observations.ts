@@ -1,4 +1,4 @@
-import observationsCsv from "../../Data/observations-sample.csv?raw"
+import measurementsUrl from "../../Data/datos_24_25.csv?url"
 import type { Pollutant } from "../domain/airQuality"
 
 export type Observation = {
@@ -21,7 +21,21 @@ const VARIABLE_POLLUTANT: Record<string, Pollutant> = {
 
 const MISSING_AT_OR_ABOVE = 9000
 
-export const observations: Observation[] = parseObservations(observationsCsv)
+const readingsByHour = new Map<string, Record<string, number>>()
+const seriesByStation = new Map<string, Array<number | null>>()
+const totalsByDay = new Map<string, { sum: number[]; count: number[] }>()
+
+let pending: Promise<void> | null = null
+
+export function loadObservations(): Promise<void> {
+  pending ??= fetch(measurementsUrl)
+    .then((response) => {
+      if (!response.ok) throw new Error(`No se pudo leer datos_24_25.csv (${response.status})`)
+      return response.text()
+    })
+    .then(parseObservations)
+  return pending
+}
 
 export function readingAt(
   pollutant: Pollutant,
@@ -31,16 +45,7 @@ export function readingAt(
   day: number,
   hour: number,
 ): number | null {
-  const match = observations.find(
-    (reading) =>
-      reading.pollutant === pollutant &&
-      reading.stationId === stationId &&
-      reading.year === year &&
-      reading.month === month &&
-      reading.day === day &&
-      reading.hour === hour,
-  )
-  return match?.value ?? null
+  return readingsByHour.get(hourKey(pollutant, year, month, day, hour))?.[stationId] ?? null
 }
 
 export function readingsAtHour(
@@ -50,19 +55,7 @@ export function readingsAtHour(
   day: number,
   hour: number,
 ): Record<string, number> {
-  const readings: Record<string, number> = {}
-  for (const reading of observations) {
-    if (
-      reading.pollutant === pollutant &&
-      reading.year === year &&
-      reading.month === month &&
-      reading.day === day &&
-      reading.hour === hour
-    ) {
-      readings[reading.stationId] = reading.value
-    }
-  }
-  return readings
+  return readingsByHour.get(hourKey(pollutant, year, month, day, hour)) ?? {}
 }
 
 export function hourlySeries(
@@ -72,22 +65,12 @@ export function hourlySeries(
   day: number,
   stationId: string | null,
 ): Array<number | null> {
-  const buckets: number[][] = Array.from({ length: 24 }, () => [])
-  for (const reading of observations) {
-    if (
-      reading.pollutant !== pollutant ||
-      reading.year !== year ||
-      reading.month !== month ||
-      reading.day !== day
-    ) {
-      continue
-    }
-    if (stationId && reading.stationId !== stationId) continue
-    buckets[reading.hour].push(reading.value)
+  if (stationId) {
+    return seriesByStation.get(dayKey(pollutant, year, month, day, stationId)) ?? emptyHours()
   }
-  return buckets.map((values) =>
-    values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length,
-  )
+  const totals = totalsByDay.get(dayKey(pollutant, year, month, day))
+  if (!totals) return emptyHours()
+  return totals.sum.map((sum, hour) => (totals.count[hour] === 0 ? null : sum / totals.count[hour]))
 }
 
 export function daysWithReadings(pollutant: Pollutant, year: number, month: number): number[] {
@@ -102,22 +85,11 @@ export function dailyAverageReadings(
   year: number,
   month: number,
 ): Record<number, number> {
-  const hours = new Map<number, number[][]>()
-  for (const reading of observations) {
-    if (reading.pollutant !== pollutant || reading.year !== year || reading.month !== month) continue
-    let buckets = hours.get(reading.day)
-    if (!buckets) {
-      buckets = Array.from({ length: 24 }, () => [])
-      hours.set(reading.day, buckets)
-    }
-    buckets[reading.hour].push(reading.value)
-  }
-
   const averages: Record<number, number> = {}
-  for (const [day, buckets] of hours) {
-    const hourly = buckets.map((values) =>
-      values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length,
-    )
+  for (let day = 1; day <= 31; day += 1) {
+    const totals = totalsByDay.get(dayKey(pollutant, year, month, day))
+    if (!totals) continue
+    const hourly = totals.sum.map((sum, hour) => (totals.count[hour] === 0 ? null : sum / totals.count[hour]))
     const average = averageReading(hourly)
     if (average != null) averages[day] = average
   }
@@ -135,26 +107,81 @@ export function averageReading(values: Array<number | null>): number | null {
   return count === 0 ? null : sum / count
 }
 
-function parseObservations(csv: string): Observation[] {
-  const [, ...rows] = csv.replace(/^\uFEFF/, "").trim().split(/\r?\n/)
-  return rows.filter(Boolean).flatMap((row) => {
-    const [dateTime, variable, rawValue, , , stationId] = row.split(",")
-    const pollutant = VARIABLE_POLLUTANT[variable]
-    const value = Number(rawValue)
-    const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):/.exec(dateTime ?? "")
-    if (!pollutant || !match || !stationId || !Number.isFinite(value) || value >= MISSING_AT_OR_ABOVE) {
-      return []
-    }
-    return [
-      {
-        pollutant,
-        stationId: stationId.trim(),
-        year: Number(match[1]),
-        month: Number(match[2]) - 1,
-        day: Number(match[3]),
-        hour: Number(match[4]),
-        value,
-      },
-    ]
-  })
+function parseObservations(csv: string): void {
+  const lines = csv.replace(/^\uFEFF/, "").split(/\r?\n/)
+  for (let index = 1; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (!line) continue
+    const cells = line.split(",")
+    const pollutant = VARIABLE_POLLUTANT[cells[1]]
+    const value = Number(cells[2])
+    const stationId = cells[5]?.trim()
+    const stamp = cells[0]
+    if (!pollutant || !stationId || !Number.isFinite(value) || value >= MISSING_AT_OR_ABOVE) continue
+    const year = Number(stamp.slice(0, 4))
+    const month = Number(stamp.slice(5, 7)) - 1
+    const day = Number(stamp.slice(8, 10))
+    const hour = Number(stamp.slice(11, 13))
+    if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue
+    addReading(pollutant, stationId, year, month, day, hour, value)
+  }
+}
+
+function addReading(
+  pollutant: Pollutant,
+  stationId: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  value: number,
+): void {
+  const atHour = hourKey(pollutant, year, month, day, hour)
+  let stations = readingsByHour.get(atHour)
+  if (!stations) {
+    stations = {}
+    readingsByHour.set(atHour, stations)
+  }
+  const previous = stations[stationId]
+  stations[stationId] = value
+
+  const seriesKey = dayKey(pollutant, year, month, day, stationId)
+  let series = seriesByStation.get(seriesKey)
+  if (!series) {
+    series = emptyHours()
+    seriesByStation.set(seriesKey, series)
+  }
+  series[hour] = value
+
+  const totalsKey = dayKey(pollutant, year, month, day)
+  let totals = totalsByDay.get(totalsKey)
+  if (!totals) {
+    totals = { sum: Array(24).fill(0), count: Array(24).fill(0) }
+    totalsByDay.set(totalsKey, totals)
+  }
+  if (previous == null) {
+    totals.sum[hour] += value
+    totals.count[hour] += 1
+  } else {
+    totals.sum[hour] += value - previous
+  }
+}
+
+function hourKey(pollutant: Pollutant, year: number, month: number, day: number, hour: number): string {
+  return `${pollutant}|${year}|${month}|${day}|${hour}`
+}
+
+function dayKey(
+  pollutant: Pollutant,
+  year: number,
+  month: number,
+  day: number,
+  stationId?: string,
+): string {
+  const key = `${pollutant}|${year}|${month}|${day}`
+  return stationId ? `${key}|${stationId}` : key
+}
+
+function emptyHours(): Array<number | null> {
+  return Array.from({ length: 24 }, () => null)
 }

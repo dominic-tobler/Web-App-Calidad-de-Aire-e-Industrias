@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { HourlyTrend } from "../../charts/HourlyTrend"
 import { industries } from "../../data/industries"
 import {
@@ -6,6 +6,7 @@ import {
   dailyAverageReadings,
   daysWithReadings,
   hourlySeries,
+  loadObservations,
   readingAt,
   readingsAtHour,
 } from "../../data/observations"
@@ -30,6 +31,24 @@ import "./dashboard.css"
 export function CommonDashboard() {
   const { state, setDate, setHour, setPollutant, setSelectedStation, setSource } = useCommonState()
   const [calendar, setCalendar] = useState(() => ({ year: state.year, month: state.month }))
+  const [observationsState, setObservationsState] = useState<"loading" | "ready" | "error">("loading")
+  const [observationsError, setObservationsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    loadObservations()
+      .then(() => {
+        if (alive) setObservationsState("ready")
+      })
+      .catch((error: unknown) => {
+        if (!alive) return
+        setObservationsError(error instanceof Error ? error.message : String(error))
+        setObservationsState("error")
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   function shiftCalendar(delta: number) {
     setCalendar((current) => {
@@ -55,7 +74,7 @@ export function CommonDashboard() {
   )
   const hourReadings = useMemo(
     () => readingsAtHour(state.pollutant, state.year, state.month, state.day, state.hour),
-    [state.pollutant, state.year, state.month, state.day, state.hour],
+    [observationsState, state.pollutant, state.year, state.month, state.day, state.hour],
   )
   const series = useMemo(
     () =>
@@ -66,19 +85,19 @@ export function CommonDashboard() {
         state.day,
         state.selectedStationId,
       ),
-    [state.pollutant, state.year, state.month, state.day, state.selectedStationId],
+    [observationsState, state.pollutant, state.year, state.month, state.day, state.selectedStationId],
   )
   const daySeries = useMemo(
     () => hourlySeries(state.pollutant, state.year, state.month, state.day, null),
-    [state.pollutant, state.year, state.month, state.day],
+    [observationsState, state.pollutant, state.year, state.month, state.day],
   )
   const markedDays = useMemo(
     () => daysWithReadings(state.pollutant, calendar.year, calendar.month),
-    [state.pollutant, calendar.year, calendar.month],
+    [observationsState, state.pollutant, calendar.year, calendar.month],
   )
   const dayLevels = useMemo(
     () => monthDayLevels(state.pollutant, calendar.year, calendar.month),
-    [state.pollutant, calendar.year, calendar.month],
+    [observationsState, state.pollutant, calendar.year, calendar.month],
   )
   const selectedDay =
     calendar.year === state.year && calendar.month === state.month ? state.day : null
@@ -103,8 +122,11 @@ export function CommonDashboard() {
       <header className="dashboard-header">
         <h1>Calidad del aire en Cundinamarca</h1>
         <p className="header-context">
-          {formatInstant(state.year, state.month, state.day)} · {formatHour(state.hour)} UTC ·{" "}
-          {pollutantLabel(state.pollutant)}
+          {observationsState === "loading"
+            ? "Cargando mediciones…"
+            : observationsState === "error"
+              ? observationsError
+              : `${formatInstant(state.year, state.month, state.day)} · ${formatHour(state.hour)} UTC · ${pollutantLabel(state.pollutant)}`}
         </p>
       </header>
 
@@ -251,7 +273,7 @@ function coverageMessage(pollutant: Pollutant, measured: number, hour: number): 
     return "La muestra no incluye el índice de calidad. Elige PM2.5, PM10, NO₂, NOx o SO₂."
   }
   if (measured === 0) {
-    return "Este día no está en la muestra. Las lecturas disponibles son del 22 de enero de 2024."
+    return `No hay mediciones de ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
   }
   const noun = measured === 1 ? "estación tiene" : "estaciones tienen"
   return `${measured} ${noun} ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
