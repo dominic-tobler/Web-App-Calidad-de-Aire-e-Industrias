@@ -91,6 +91,24 @@ export function normalizeIndustry(raw: RawIndustry): Industry {
   }
 }
 
+const BOYACA_PLACE: Record<string, string> = {
+  raquira: "Ráquira",
+  chiquinquira: "Chiquinquirá",
+}
+
+function plainKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+}
+
+export function placeWithDepartment(name: string, department: string | null | undefined): string {
+  if (plainKey(department ?? "") !== "boyaca") return formatPlace(name)
+  const place = BOYACA_PLACE[plainKey(name)] ?? formatPlace(name)
+  return `${place}, Boyacá`
+}
+
 export function formatPlace(value: string): string {
   const titled = value
     .toLocaleLowerCase("es")

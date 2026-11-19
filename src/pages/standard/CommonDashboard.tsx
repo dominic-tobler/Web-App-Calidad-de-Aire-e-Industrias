@@ -19,8 +19,8 @@ import {
   type Pollutant,
 } from "../../domain/airQuality"
 import { formatDistance } from "../../domain/geo"
-import { formatPlace, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../../domain/industry"
-import { stationStatusLabel, stationTitle } from "../../domain/station"
+import { placeWithDepartment, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../../domain/industry"
+import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
 import { formatHour, formatInstant, MONTHS, type Year } from "../../domain/time"
 import { CundinamarcaMap } from "../../layouts/map/CundinamarcaMap"
 import { useCommonState } from "../../state/commonState"
@@ -196,7 +196,7 @@ export function CommonDashboard() {
             <h2>{selectedStation ? stationTitle(selectedStation) : "Estación seleccionada"}</h2>
             <p>
               {selectedStation
-                ? `${selectedStation.municipality ? formatPlace(selectedStation.municipality) : "Municipio sin asignar"} · ${stationStatusLabel(selectedStation)}`
+                ? `${stationPlace(selectedStation)} · ${stationStatusLabel(selectedStation)}`
                 : "Las líneas van a las industrias más cercanas"}
             </p>
           </header>
@@ -220,7 +220,7 @@ export function CommonDashboard() {
                     {nearest.map(({ industry, distanceKm }) => (
                       <li key={industry.id}>
                         <span>
-                          <strong>{formatPlace(industry.municipality)}</strong>
+                          <strong>{placeWithDepartment(industry.municipality, industry.department)}</strong>
                           <span className="nearest-meta">
                             {sourceLabel(industry.source)} · {statusLabel(industry.status)}
                           </span>

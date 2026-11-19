@@ -443,10 +443,35 @@ select:focus-visible {
 
 .symbol-legend {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   padding: 8px 10px;
   font-size: 12px;
+}
+
+.territory-legend,
+.symbol-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.territory-swatch {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+}
+
+.territory-swatch.is-cundinamarca {
+  background: rgba(26, 60, 50, 0.28);
+  box-shadow: inset 0 0 0 1.5px #6e857a;
+}
+
+.territory-swatch.is-boyaca {
+  background: rgba(196, 165, 116, 0.85);
+  box-shadow: inset 0 0 0 1.5px #8a6232;
 }
 
 .symbol-legend span,

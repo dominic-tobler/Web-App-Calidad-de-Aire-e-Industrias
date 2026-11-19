@@ -17,9 +17,9 @@ import {
   type Rectangle,
 } from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { municipalities } from "../../../data/municipalities"
-import { formatPlace, statusLabel, type Industry } from "../../../domain/industry"
-import { stationStatusLabel, stationTitle, type Station } from "../../../domain/station"
+import { boyacaMunicipalities, municipalities } from "../../../data/municipalities"
+import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../../domain/industry"
+import { stationPlace, stationStatusLabel, stationTitle, type Station } from "../../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "../../../layouts/map/industryMarkers"
 import { flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
 import type { GeoBox } from "../domain/geoBox"
@@ -99,6 +99,22 @@ export function ExpertMap({
       { attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ", maxZoom: 18, maxNativeZoom: 16 },
     ).addTo(map)
 
+    const boyaca = geoJSON(boyacaMunicipalities, {
+      style: BOYACA_STYLE,
+      onEachFeature(feature, layer) {
+        const name = feature.properties?.name
+        if (!name || !isPath(layer)) return
+        layer.on("mouseover", () => {
+          layer.setStyle({ fillOpacity: 0.55, weight: 1.8, color: "#6e4a24" })
+          setMunicipality(placeWithDepartment(name, feature.properties?.department))
+        })
+        layer.on("mouseout", () => {
+          boyaca.resetStyle(layer)
+          setMunicipality(null)
+        })
+      },
+    }).addTo(map)
+
     const boundaries = geoJSON(municipalities, {
       style: { color: "#6e857a", weight: 1, fillColor: "#1a3c32", fillOpacity: 0.12 },
       onEachFeature(feature, layer) {
@@ -106,7 +122,7 @@ export function ExpertMap({
         if (!name || !isPath(layer)) return
         layer.on("mouseover", () => {
           layer.setStyle({ fillOpacity: 0.24, weight: 1.6, color: "#1a3c32" })
-          setMunicipality(formatPlace(name))
+          setMunicipality(placeWithDepartment(name, feature.properties?.department))
         })
         layer.on("mouseout", () => {
           boundaries.resetStyle(layer)
@@ -128,7 +144,8 @@ export function ExpertMap({
     stationsLayerRef.current = layerGroup().addTo(map)
     mapRef.current = map
 
-    const bounds = boundaries.getBounds()
+    const bounds = boundaries.getBounds().pad(0)
+    bounds.extend(boyaca.getBounds())
     const fit = () => {
       if (host.clientWidth < 40 || host.clientHeight < 40 || !bounds.isValid()) return false
       map.invalidateSize()
@@ -297,7 +314,7 @@ export function ExpertMap({
       })
       point.bindTooltip(
         `<strong>${escapeHtml(stationTitle(station))}</strong><span>${
-          station.municipality ? escapeHtml(formatPlace(station.municipality)) : "Municipio sin asignar"
+          escapeHtml(stationPlace(station))
         } · ${escapeHtml(stationStatusLabel(station))}</span><span>${escapeHtml(stationDetail(station))}</span>`,
         { direction: "top", offset: [0, -8], opacity: 1, className: "station-tooltip" },
       )
@@ -317,7 +334,7 @@ export function ExpertMap({
         ref={hostRef}
         className="leaflet-host"
         role="application"
-        aria-label="Mapa de Cundinamarca con estaciones e industrias; arrastra para seleccionar"
+        aria-label="Mapa de Cundinamarca y del borde con Boyacá, con estaciones e industrias; arrastra para seleccionar"
       />
 
       <div className="map-tools">
@@ -351,15 +368,25 @@ export function ExpertMap({
               : "Modo desplazamiento. Activa el recuadro para seleccionar."}
           </p>
           <div className="symbol-legend">
-            <span>
-              <span className="station-dot" /> Estación
-            </span>
-            <span>
-              <StarIcon fill={STATUS_FILL.seguimiento} /> Seguimiento / trámite
-            </span>
-            <span>
-              <StarIcon fill={STATUS_FILL.sancionada} /> Sancionada
-            </span>
+            <div className="territory-legend">
+              <span>
+                <span className="territory-swatch is-cundinamarca" /> Cundinamarca
+              </span>
+              <span>
+                <span className="territory-swatch is-boyaca" /> Boyacá
+              </span>
+            </div>
+            <div className="symbol-row">
+              <span>
+                <span className="station-dot" /> Estación
+              </span>
+              <span>
+                <StarIcon fill={STATUS_FILL.seguimiento} /> Seguimiento / trámite
+              </span>
+              <span>
+                <StarIcon fill={STATUS_FILL.sancionada} /> Sancionada
+              </span>
+            </div>
           </div>
         </div>
         <div className="contamination-scale">
@@ -384,6 +411,13 @@ function toGeoBox(bounds: LatLngBounds): GeoBox {
   }
 }
 
+const BOYACA_STYLE = {
+  color: "#8a6232",
+  weight: 1.25,
+  fillColor: "#c4a574",
+  fillOpacity: 0.4,
+}
+
 function isPath(layer: unknown): layer is Path {
   return typeof layer === "object" && layer !== null && "setStyle" in layer
 }
@@ -398,7 +432,7 @@ function starIcon(fill: string, dimmed: boolean) {
 }
 
 function industryTooltip(industry: Industry) {
-  const place = escapeHtml(formatPlace(industry.municipality))
+  const place = escapeHtml(placeWithDepartment(industry.municipality, industry.department))
   const vereda = industry.vereda ? ` · ${escapeHtml(formatPlace(industry.vereda))}` : ""
   const detail =
     industry.status === "sancionada"
