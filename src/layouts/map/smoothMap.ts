@@ -1,4 +1,14 @@
-import { DomEvent, type LatLng, type Map as LeafletMap, type MapOptions, type Point } from "leaflet"
+import {
+  DomEvent,
+  latLng,
+  point,
+  type LatLng,
+  type LatLngBounds,
+  type Map as LeafletMap,
+  type MapOptions,
+  type Point,
+  type PointExpression,
+} from "leaflet"
 
 /**
  * Zoom fraccionario. La rueda no usa el zoom nativo de Leaflet: cada tick
@@ -81,6 +91,7 @@ export function attachSmoothWheel(map: LeafletMap) {
     const point = anchor
     if (!point || delta === 0) return
 
+    cancelGlide(map, true)
     if (pinch._animatingZoom) {
       pinch._animatingZoom = false
       pinch._mapPane?.classList.remove("leaflet-zoom-anim")
@@ -172,6 +183,122 @@ function sharpenTiles(map: LeafletMap, isGesturing: () => boolean) {
 }
 
 export function flyZoom(map: LeafletMap, delta: number) {
+  cancelGlide(map, true)
   const next = Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), map.getZoom() + delta))
   map.flyTo(map.getCenter(), next, { duration: 0.35, easeLinearity: 0.25 })
+}
+
+type GlideJob = {
+  frame: number
+  onDrag: () => void
+}
+
+const glides = new WeakMap<LeafletMap, GlideJob>()
+
+function cancelGlide(map: LeafletMap, settle: boolean) {
+  const job = glides.get(map)
+  if (!job) return
+  cancelAnimationFrame(job.frame)
+  map.off("dragstart", job.onDrag)
+  glides.delete(map)
+  if (settle) (map as PinchMap)._moveEnd(true)
+}
+
+// El zoom del acercamiento escala el dibujo vectorial entero. Sin esto, los
+// círculos y los municipios se inflan y se pixelan hasta que la vista se detiene.
+function redrawVectors(map: LeafletMap) {
+  map.eachLayer((layer) => {
+    const renderer = layer as { _reset?: () => void; _updateTransform?: unknown }
+    if (typeof renderer._updateTransform === "function" && typeof renderer._reset === "function") {
+      renderer._reset()
+    }
+  })
+}
+
+/**
+ * Acerca el mapa al encuadre: el zoom y el centro avanzan juntos y frenan al llegar.
+ */
+export function glideToBounds(
+  map: LeafletMap,
+  bounds: LatLngBounds,
+  options: {
+    paddingTopLeft?: PointExpression
+    paddingBottomRight?: PointExpression
+    maxZoom?: number
+    duration?: number
+  } = {},
+) {
+  const pinch = map as PinchMap
+  const wasGliding = glides.has(map)
+  cancelGlide(map, false)
+
+  const paddingTL = point(options.paddingTopLeft ?? [0, 0])
+  const paddingBR = point(options.paddingBottomRight ?? [0, 0])
+  let targetZoom = map.getBoundsZoom(bounds, false, paddingTL.add(paddingBR))
+  if (options.maxZoom != null) targetZoom = Math.min(options.maxZoom, targetZoom)
+  targetZoom = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), targetZoom))
+  if (!Number.isFinite(targetZoom)) return
+
+  const paddingOffset = paddingBR.subtract(paddingTL).divideBy(2)
+  const targetCenter = map.unproject(
+    map
+      .project(bounds.getSouthWest(), targetZoom)
+      .add(map.project(bounds.getNorthEast(), targetZoom))
+      .divideBy(2)
+      .add(paddingOffset),
+    targetZoom,
+  )
+
+  const startCenter = map.getCenter()
+  const startZoom = map.getZoom()
+  const shift = map.latLngToContainerPoint(targetCenter).distanceTo(map.latLngToContainerPoint(startCenter))
+  if (Math.abs(targetZoom - startZoom) < 0.04 && shift < 12) {
+    if (wasGliding) {
+      pinch._move(targetCenter, targetZoom)
+      pinch._moveEnd(true)
+    }
+    return
+  }
+
+  if (pinch._animatingZoom) {
+    pinch._animatingZoom = false
+    pinch._mapPane?.classList.remove("leaflet-zoom-anim")
+  }
+  if (!wasGliding) {
+    pinch._stop()
+    pinch._moveStart(true, false)
+  }
+
+  const duration = (options.duration ?? 1.2) * 1000
+  const started = performance.now()
+  const job: GlideJob = { frame: 0, onDrag: () => cancelGlide(map, false) }
+  map.on("dragstart", job.onDrag)
+  glides.set(map, job)
+
+  const frame = (now: number) => {
+    if (glides.get(map) !== job) return
+    const t = Math.min(1, (now - started) / duration)
+    const eased = 1 - (1 - t) ** 3
+    const zoom = startZoom + (targetZoom - startZoom) * eased
+    pinch._move(
+      latLng(
+        startCenter.lat + (targetCenter.lat - startCenter.lat) * eased,
+        startCenter.lng + (targetCenter.lng - startCenter.lng) * eased,
+      ),
+      zoom,
+      { flyTo: true },
+    )
+    redrawVectors(map)
+    if (t < 1) {
+      job.frame = requestAnimationFrame(frame)
+      return
+    }
+    pinch._move(targetCenter, targetZoom)
+    redrawVectors(map)
+    pinch._moveEnd(true)
+    map.off("dragstart", job.onDrag)
+    glides.delete(map)
+  }
+
+  job.frame = requestAnimationFrame(frame)
 }

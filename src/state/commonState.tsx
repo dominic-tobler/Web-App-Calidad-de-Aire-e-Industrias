@@ -7,7 +7,6 @@ import {
   type ReactNode,
 } from "react"
 import type { Pollutant } from "../domain/airQuality"
-import type { SourceCategory } from "../domain/industry"
 import { daysInMonth, type Year } from "../domain/time"
 
 export type CommonView = "exploracion" | "analisis"
@@ -19,7 +18,7 @@ export type CommonState = {
   day: number
   hour: number
   pollutant: Pollutant
-  source: SourceCategory
+  source: string
   view: CommonView
   analysisMode: AnalysisMode
   mapExpanded: boolean
@@ -35,7 +34,7 @@ type CommonContextValue = {
   setDate: (year: Year, month: number, day: number) => void
   setHour: (hour: number) => void
   setPollutant: (pollutant: Pollutant) => void
-  setSource: (source: SourceCategory) => void
+  setSource: (source: string) => void
   setView: (view: CommonView) => void
   setAnalysisMode: (mode: AnalysisMode) => void
   setMapExpanded: (expanded: boolean) => void

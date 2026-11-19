@@ -1,12 +1,21 @@
 import { useEffect, useRef } from "react"
 import * as d3 from "d3"
-import { airQualityLevel, pollutantLabel, type Pollutant } from "../domain/airQuality"
+import {
+  AIR_QUALITY_LEVELS,
+  THRESHOLDS,
+  airQualityLevel,
+  pollutantLabel,
+  type Pollutant,
+} from "../domain/airQuality"
 import { formatCompactInstant, formatHour } from "../domain/time"
 
 type HourPoint = {
   hour: number
   value: number | null
 }
+
+// Mismos fondos suaves que la serie del usuario experto, en el orden de AIR_QUALITY_LEVELS.
+const BAND_FILLS = ["#d1ebd1", "#fffab8", "#fad4bd", "#f7b8b8", "#dbc2e5"]
 
 type HourlyTrendProps = {
   year: number
@@ -43,9 +52,12 @@ export function HourlyTrend({
       const height = wrap.clientHeight
       if (width < 40 || height < 40) return
 
-      const margin = { top: 10, right: 12, bottom: 28, left: 42 }
+      const cuts = THRESHOLDS[pollutant]
+      const showLabels = cuts != null && width >= 280
+      const margin = { top: 10, right: showLabels ? 68 : 12, bottom: 28, left: 42 }
       const innerWidth = width - margin.left - margin.right
       const innerHeight = height - margin.top - margin.bottom
+      if (innerWidth < 20 || innerHeight < 20) return
       const svg = d3.select(svgElement)
       svg.attr("width", width).attr("height", height)
       svg.selectAll("*").remove()
@@ -53,10 +65,44 @@ export function HourlyTrend({
       const plot = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`)
       const points: HourPoint[] = series.map((value, index) => ({ hour: index, value }))
       const present = points.flatMap((point) => (point.value == null ? [] : [point.value]))
-      const yMax = present.length === 0 ? 1 : Math.max(...present, 1)
+      const dataMax = present.length === 0 ? 1 : Math.max(...present, 1)
+      // Igual que en la serie del experto: al menos la banda Moderado, para leer el nivel.
+      const yMax = cuts ? Math.max(dataMax, cuts[1]) : dataMax
 
       const xScale = d3.scaleLinear().domain([0, 23]).range([0, innerWidth])
       const yScale = d3.scaleLinear().domain([0, yMax]).nice().range([innerHeight, 0])
+
+      if (cuts) {
+        const yTop = yScale.domain()[1]
+        const edges = [0, ...cuts, Number.POSITIVE_INFINITY]
+        AIR_QUALITY_LEVELS.forEach((level, index) => {
+          const low = edges[index]
+          const high = Math.min(edges[index + 1], yTop)
+          if (low >= yTop) return
+          const bandTop = yScale(high)
+          const bandHeight = Math.max(0, yScale(low) - bandTop)
+          plot
+            .append("rect")
+            .attr("x", 0)
+            .attr("width", innerWidth)
+            .attr("y", bandTop)
+            .attr("height", bandHeight)
+            .attr("fill", BAND_FILLS[index])
+            .attr("pointer-events", "none")
+          if (showLabels && bandHeight >= 14) {
+            plot
+              .append("text")
+              .attr("x", innerWidth + 6)
+              .attr("y", bandTop + bandHeight / 2)
+              .attr("dy", "0.35em")
+              .attr("fill", "#666")
+              .attr("font-size", 10)
+              .attr("font-family", "IBM Plex Sans, sans-serif")
+              .attr("pointer-events", "none")
+              .text(level.label)
+          }
+        })
+      }
 
       plot
         .append("g")

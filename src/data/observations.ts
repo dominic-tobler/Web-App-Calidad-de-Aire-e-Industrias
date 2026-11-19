@@ -15,8 +15,9 @@ const VARIABLE_POLLUTANT: Record<string, Pollutant> = {
   PM2: "pm25",
   PM10: "pm10",
   No2: "no2",
-  Nox: "nox",
   So2: "so2",
+  Co: "co",
+  O3: "o3",
 }
 
 const MISSING_AT_OR_ABOVE = 9000

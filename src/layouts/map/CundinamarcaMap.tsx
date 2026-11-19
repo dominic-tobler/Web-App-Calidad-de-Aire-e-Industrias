@@ -32,7 +32,7 @@ import {
   type StationLink,
 } from "../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "./industryMarkers"
-import { attachSmoothWheel, flyZoom, smoothMapOptions } from "./smoothMap"
+import { attachSmoothWheel, flyZoom, glideToBounds, smoothMapOptions } from "./smoothMap"
 
 type CundinamarcaMapProps = {
   industries: Industry[]
@@ -249,21 +249,21 @@ export function CundinamarcaMap({
       for (const link of links) {
         focus.extend([link.industry.latitude, link.industry.longitude])
       }
-      map.fitBounds(focus, {
+      glideToBounds(map, focus, {
         paddingTopLeft: [36, 48],
         paddingBottomRight: [36, 108],
         maxZoom: 15,
-        animate: false,
+        duration: 1.2,
       })
       hadSelectionRef.current = true
       return
     }
 
     if (hadSelectionRef.current && overviewBoundsRef.current) {
-      map.fitBounds(overviewBoundsRef.current, {
+      glideToBounds(map, overviewBoundsRef.current, {
         paddingTopLeft: [28, 52],
         paddingBottomRight: [28, 96],
-        animate: false,
+        duration: 1.15,
       })
       hadSelectionRef.current = false
     }

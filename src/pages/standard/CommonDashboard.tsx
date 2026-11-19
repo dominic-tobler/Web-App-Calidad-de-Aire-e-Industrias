@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { HourlyTrend } from "../../charts/HourlyTrend"
-import { industries } from "../../data/industries"
+import { EMISSION_SOURCE_ALL, industries } from "../../data/industries"
 import {
   averageReading,
   dailyAverageReadings,
@@ -19,9 +19,9 @@ import {
   type Pollutant,
 } from "../../domain/airQuality"
 import { formatDistance } from "../../domain/geo"
-import { placeWithDepartment, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../../domain/industry"
+import { emissionSourceKey, emissionSourceLabel, placeWithDepartment, statusLabel } from "../../domain/industry"
 import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
-import { formatHour, formatInstant, MONTHS, type Year } from "../../domain/time"
+import { formatHour, formatInstant, type Year } from "../../domain/time"
 import { CundinamarcaMap } from "../../layouts/map/CundinamarcaMap"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
@@ -62,7 +62,7 @@ export function CommonDashboard() {
     () =>
       industries.filter((industry) => {
         if (industry.status === "tramite") return false
-        return state.source === "todos" || industry.source === state.source
+        return state.source === EMISSION_SOURCE_ALL || emissionSourceKey(industry.sourceRaw) === state.source
       }),
     [state.source],
   )
@@ -139,27 +139,6 @@ export function CommonDashboard() {
             onPollutant={setPollutant}
           />
           <section className="calendar-block">
-            <div className="month-nav">
-              <button
-                type="button"
-                onClick={() => shiftCalendar(-1)}
-                disabled={calendar.year === 2024 && calendar.month === 0}
-                aria-label="Mes anterior"
-              >
-                ‹
-              </button>
-              <span>
-                {MONTHS[calendar.month]} {calendar.year}
-              </span>
-              <button
-                type="button"
-                onClick={() => shiftCalendar(1)}
-                disabled={calendar.year === 2025 && calendar.month === 11}
-                aria-label="Mes siguiente"
-              >
-                ›
-              </button>
-            </div>
             <CalendarGrid
               year={calendar.year}
               month={calendar.month}
@@ -167,6 +146,10 @@ export function CommonDashboard() {
               markedDays={markedDays}
               dayLevels={dayLevels}
               onDay={(day) => setDate(calendar.year, calendar.month, day)}
+              onPreviousMonth={() => shiftCalendar(-1)}
+              onNextMonth={() => shiftCalendar(1)}
+              previousMonthDisabled={calendar.year === 2024 && calendar.month === 0}
+              nextMonthDisabled={calendar.year === 2025 && calendar.month === 11}
             />
             <div className="day-scale">
               <p>{dayLevel ? `Nivel del día · ${dayLevel.label}` : "Sin mediciones este día"}</p>
@@ -222,7 +205,7 @@ export function CommonDashboard() {
                         <span>
                           <strong>{placeWithDepartment(industry.municipality, industry.department)}</strong>
                           <span className="nearest-meta">
-                            {sourceLabel(industry.source)} · {statusLabel(industry.status)}
+                            {emissionSourceLabel(industry.sourceRaw)} · {statusLabel(industry.status)}
                           </span>
                         </span>
                         <span className="nearest-distance">{formatDistance(distanceKm)}</span>
@@ -269,18 +252,11 @@ function monthDayLevels(
 }
 
 function coverageMessage(pollutant: Pollutant, measured: number, hour: number): string {
-  if (pollutant === "ica") {
-    return "La muestra no incluye el índice de calidad. Elige PM2.5, PM10, NO₂, NOx o SO₂."
-  }
   if (measured === 0) {
     return `No hay mediciones de ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
   }
   const noun = measured === 1 ? "estación tiene" : "estaciones tienen"
   return `${measured} ${noun} ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
-}
-
-function sourceLabel(source: SourceCategory): string {
-  return SOURCE_OPTIONS.find((option) => option.id === source)?.label ?? source
 }
 
 function formatCoordinate(value: number): string {

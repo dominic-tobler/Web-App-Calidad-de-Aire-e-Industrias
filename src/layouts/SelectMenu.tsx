@@ -41,6 +41,7 @@ export function SelectMenu({
         className="menu-button"
         aria-expanded={open}
         aria-haspopup="listbox"
+        title={selected?.label ?? value}
         onClick={() => setOpen((current) => !current)}
       >
         {selected?.label ?? value} ▾
