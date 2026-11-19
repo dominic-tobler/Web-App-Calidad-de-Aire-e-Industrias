@@ -68,7 +68,7 @@ select:focus-visible {
 .lines-layout {
   display: grid;
   grid-template-columns: 272px minmax(0, 1fr) 340px;
-  grid-template-rows: minmax(0, 1fr) 220px;
+  grid-template-rows: minmax(0, 1fr) 248px;
   gap: 16px;
   height: calc(100vh - 112px);
   padding: 8px 28px 16px;
@@ -311,7 +311,7 @@ select:focus-visible {
 .map-frame {
   position: relative;
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -562,7 +562,7 @@ select:focus-visible {
 
 .station-panel {
   grid-column: 3;
-  grid-row: 1;
+  grid-row: 1 / span 2;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -666,7 +666,7 @@ select:focus-visible {
 }
 
 .trend-card {
-  grid-column: 3;
+  grid-column: 2;
   grid-row: 2;
   min-height: 0;
   display: flex;
