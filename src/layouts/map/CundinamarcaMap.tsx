@@ -31,6 +31,7 @@ import {
   type StationLink,
 } from "../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "./industryMarkers"
+import { flyZoom, smoothMapOptions } from "./smoothMap"
 
 type CundinamarcaMapProps = {
   industries: Industry[]
@@ -81,8 +82,7 @@ export function CundinamarcaMap({
 
     const map = createMap(host, {
       zoomControl: false,
-      zoomAnimation: false,
-      fadeAnimation: false,
+      ...smoothMapOptions,
       minZoom: 6,
       maxZoom: 18,
       center: [5, -74.1],
@@ -281,8 +281,7 @@ export function CundinamarcaMap({
   const zoomBy = (direction: "in" | "out") => {
     const map = mapRef.current
     if (!map) return
-    const next = map.getZoom() + (direction === "in" ? 1 : -1)
-    map.setZoom(next)
+    flyZoom(map, direction === "in" ? 1 : -1)
   }
 
   return (

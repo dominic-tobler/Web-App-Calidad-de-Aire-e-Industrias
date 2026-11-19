@@ -21,6 +21,7 @@ import { municipalities } from "../../../data/municipalities"
 import { formatPlace, statusLabel, type Industry } from "../../../domain/industry"
 import { stationStatusLabel, stationTitle, type Station } from "../../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "../../../layouts/map/industryMarkers"
+import { flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
 import type { GeoBox } from "../domain/geoBox"
 
 
@@ -85,13 +86,11 @@ export function ExpertMap({
 
     const map = createMap(host, {
       zoomControl: false,
-      zoomAnimation: false,
-      fadeAnimation: false,
+      ...smoothMapOptions,
       minZoom: 6,
       maxZoom: 18,
       center: [5, -74.1],
       zoom: 8,
-      zoomSnap: 0.25,
       boxZoom: false,
     })
 
@@ -309,7 +308,7 @@ export function ExpertMap({
 
   const zoomBy = (delta: number) => {
     const map = mapRef.current
-    if (map) map.setZoom(map.getZoom() + delta)
+    if (map) flyZoom(map, delta)
   }
 
   return (
