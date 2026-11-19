@@ -31,7 +31,7 @@ import {
   type Station,
   type StationLink,
 } from "../../domain/station"
-import { STAR_PATH, STATUS_FILL } from "./industryMarkers"
+import { FACTORY_PATH, STATUS_FILL, industryMarkerHtml } from "./industryMarkers"
 import { attachSmoothWheel, flyZoom, glideToBounds, smoothMapOptions } from "./smoothMap"
 
 type CundinamarcaMapProps = {
@@ -47,9 +47,9 @@ type CundinamarcaMapProps = {
 }
 
 const ICONS = {
-  sancionada: starIcon(STATUS_FILL.sancionada),
-  seguimiento: starIcon(STATUS_FILL.seguimiento),
-  tramite: starIcon(STATUS_FILL.tramite),
+  sancionada: industryIcon(STATUS_FILL.sancionada),
+  seguimiento: industryIcon(STATUS_FILL.seguimiento),
+  tramite: industryIcon(STATUS_FILL.tramite),
 }
 
 export function CundinamarcaMap({
@@ -342,10 +342,12 @@ export function CundinamarcaMap({
               <span className="station-dot" /> Estación
             </span>
             <span>
-              <StarIcon fill="#243830" /> Seguimiento
+              <IndustryIcon fill="#243830" />
+              <span className="symbol-caption">Industria en seguimiento</span>
             </span>
             <span>
-              <StarIcon fill="#d6453d" /> Sancionada
+              <IndustryIcon fill="#d6453d" />
+              <span className="symbol-caption">Industria sancionada</span>
             </span>
           </div>
         </div>
@@ -373,12 +375,12 @@ function isPath(layer: unknown): layer is Path {
   return typeof layer === "object" && layer !== null && "setStyle" in layer
 }
 
-function starIcon(fill: string) {
+function industryIcon(fill: string) {
   return divIcon({
     className: "industry-marker",
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
-    html: `<svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path fill="${fill}" stroke="#ffffff" stroke-width="0.6" d="${STAR_PATH}"/></svg>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    html: industryMarkerHtml(fill),
   })
 }
 
@@ -411,10 +413,10 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;")
 }
 
-function StarIcon({ fill }: { fill: string }) {
+function IndustryIcon({ fill }: { fill: string }) {
   return (
-    <svg className="star-icon" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-      <path fill={fill} d={STAR_PATH} />
+    <svg className="industry-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path fill={fill} fillRule="evenodd" d={FACTORY_PATH} />
     </svg>
   )
 }
