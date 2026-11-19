@@ -37,7 +37,7 @@ Use ctrl + c to stop the local development server, or simply close the terminal
 
 ### Running the Expert View
 
-The expert-user dashboard runs as a separate app on its own port, so it does not mix with the common-user view:
+The expert-user dashboard is reachable from the landing page at `/expert` (`npm run dev`). It can also run as a separate app on its own port:
 
 ```bash
 npm run dev:expert
@@ -51,8 +51,8 @@ npm run dev:expert
 | :--- | :--- |
 | `expert.html` | HTML entry of the expert view |
 | `vite.expert.config.ts` | Vite config for the expert view (port 5174, serves `expert.html` at `/`) |
-| `src/expert/` | Expert dashboard: map with box selection, moving-average series, correlation matrix and industry histograms |
-| `src/map/industryMarkers.ts` | Industry star convention shared by both maps (red = sanctioned, dark = follow-up / in process) |
+| `src/pages/expert/` | Expert dashboard: map with box selection, moving-average series, correlation matrix and industry histograms |
+| `src/layouts/map/industryMarkers.ts` | Industry star convention shared by both maps (red = sanctioned, dark = follow-up / in process) |
 
 Data used by the expert view (all in `Data/`):
 

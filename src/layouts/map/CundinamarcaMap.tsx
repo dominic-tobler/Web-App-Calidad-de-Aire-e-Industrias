@@ -15,21 +15,24 @@ import {
   type Path,
 } from "leaflet"
 import "leaflet/dist/leaflet.css"
-import { municipalities } from "../data/municipalities"
+import { boyacaMunicipalities, municipalities } from "../../data/municipalities"
 import {
   airQualityLevel,
   formatReading,
   pollutantLabel,
   type Pollutant,
-} from "../domain/airQuality"
-import { formatPlace, statusLabel, type Industry } from "../domain/industry"
+} from "../../domain/airQuality"
+
+import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../domain/industry"
 import {
+  stationPlace,
   stationStatusLabel,
   stationTitle,
   type Station,
   type StationLink,
-} from "../domain/station"
+} from "../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "./industryMarkers"
+import { attachSmoothWheel, flyZoom, glideToBounds, smoothMapOptions } from "./smoothMap"
 
 type CundinamarcaMapProps = {
   industries: Industry[]
@@ -80,8 +83,7 @@ export function CundinamarcaMap({
 
     const map = createMap(host, {
       zoomControl: false,
-      zoomAnimation: false,
-      fadeAnimation: false,
+      ...smoothMapOptions,
       minZoom: 6,
       maxZoom: 18,
       center: [5, -74.1],
@@ -94,8 +96,25 @@ export function CundinamarcaMap({
         attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
         maxZoom: 18,
         maxNativeZoom: 16,
+        updateWhenZooming: false,
       },
     ).addTo(map)
+
+    const boyaca = geoJSON(boyacaMunicipalities, {
+      style: BOYACA_STYLE,
+      onEachFeature(feature, layer) {
+        const name = feature.properties?.name
+        if (!name || !isPath(layer)) return
+        layer.on("mouseover", () => {
+          layer.setStyle({ fillOpacity: 0.55, weight: 1.8, color: "#6e4a24" })
+          setMunicipality(placeWithDepartment(name, feature.properties?.department))
+        })
+        layer.on("mouseout", () => {
+          boyaca.resetStyle(layer)
+          setMunicipality(null)
+        })
+      },
+    }).addTo(map)
 
     const boundaries = geoJSON(municipalities, {
       style: {
@@ -109,7 +128,7 @@ export function CundinamarcaMap({
         if (!name || !isPath(layer)) return
         layer.on("mouseover", () => {
           layer.setStyle({ fillOpacity: 0.28, weight: 1.8, color: "#1a3c32" })
-          setMunicipality(formatPlace(name))
+          setMunicipality(placeWithDepartment(name, feature.properties?.department))
         })
         layer.on("mouseout", () => {
           boundaries.resetStyle(layer)
@@ -119,6 +138,7 @@ export function CundinamarcaMap({
     }).addTo(map)
 
     const bounds = boundaries.getBounds().pad(0)
+    bounds.extend(boyaca.getBounds())
     for (const station of stations) bounds.extend([station.latitude, station.longitude])
     overviewBoundsRef.current = bounds
     map.createPane("industries")
@@ -135,6 +155,7 @@ export function CundinamarcaMap({
     linksLayerRef.current = layerGroup().addTo(map)
     stationsLayerRef.current = layerGroup().addTo(map)
     map.on("click", () => selectStationRef.current(null))
+    const detachWheel = attachSmoothWheel(map)
     mapRef.current = map
 
     const fit = () => {
@@ -158,6 +179,7 @@ export function CundinamarcaMap({
     observer.observe(host)
 
     return () => {
+      detachWheel()
       observer.disconnect()
       map.remove()
       mapRef.current = null
@@ -176,7 +198,7 @@ export function CundinamarcaMap({
       marker([industry.latitude, industry.longitude], {
         pane: "industries",
         icon: ICONS[industry.status],
-        title: formatPlace(industry.municipality),
+        title: placeWithDepartment(industry.municipality, industry.department),
         keyboard: true,
       })
         .bindTooltip(tooltipHtml(industry), {
@@ -227,21 +249,21 @@ export function CundinamarcaMap({
       for (const link of links) {
         focus.extend([link.industry.latitude, link.industry.longitude])
       }
-      map.fitBounds(focus, {
+      glideToBounds(map, focus, {
         paddingTopLeft: [36, 48],
         paddingBottomRight: [36, 108],
         maxZoom: 15,
-        animate: false,
+        duration: 1.2,
       })
       hadSelectionRef.current = true
       return
     }
 
     if (hadSelectionRef.current && overviewBoundsRef.current) {
-      map.fitBounds(overviewBoundsRef.current, {
+      glideToBounds(map, overviewBoundsRef.current, {
         paddingTopLeft: [28, 52],
         paddingBottomRight: [28, 96],
-        animate: false,
+        duration: 1.15,
       })
       hadSelectionRef.current = false
     }
@@ -280,8 +302,7 @@ export function CundinamarcaMap({
   const zoomBy = (direction: "in" | "out") => {
     const map = mapRef.current
     if (!map) return
-    const next = map.getZoom() + (direction === "in" ? 1 : -1)
-    map.setZoom(next)
+    flyZoom(map, direction === "in" ? 1 : -1)
   }
 
   return (
@@ -290,7 +311,7 @@ export function CundinamarcaMap({
         ref={hostRef}
         className="leaflet-host"
         role="application"
-        aria-label="Mapa de Cundinamarca con estaciones de calidad del aire y fuentes de emisión"
+        aria-label="Mapa de Cundinamarca y del borde con Boyacá, con estaciones de calidad del aire y fuentes de emisión"
       />
 
       {showHourBadge && <div className="hour-badge">Hora {hourLabel}</div>}
@@ -308,15 +329,25 @@ export function CundinamarcaMap({
 
       <div className="map-footer">
         <div className="symbol-legend">
-          <span>
-            <span className="station-dot" /> Estación
-          </span>
-          <span>
-            <StarIcon fill="#243830" /> Seguimiento
-          </span>
-          <span>
-            <StarIcon fill="#d6453d" /> Sancionada
-          </span>
+          <div className="territory-legend">
+            <span>
+              <span className="territory-swatch is-cundinamarca" /> Cundinamarca
+            </span>
+            <span>
+              <span className="territory-swatch is-boyaca" /> Boyacá
+            </span>
+          </div>
+          <div className="symbol-row">
+            <span>
+              <span className="station-dot" /> Estación
+            </span>
+            <span>
+              <StarIcon fill="#243830" /> Seguimiento
+            </span>
+            <span>
+              <StarIcon fill="#d6453d" /> Sancionada
+            </span>
+          </div>
         </div>
         <div className="contamination-scale">
           <p>Nivel de contaminación</p>
@@ -329,6 +360,13 @@ export function CundinamarcaMap({
       </div>
     </div>
   )
+}
+
+const BOYACA_STYLE = {
+  color: "#8a6232",
+  weight: 1.25,
+  fillColor: "#c4a574",
+  fillOpacity: 0.4,
 }
 
 function isPath(layer: unknown): layer is Path {
@@ -345,9 +383,7 @@ function starIcon(fill: string) {
 }
 
 function stationTooltipHtml(station: Station, detail: string) {
-  const place = station.municipality
-    ? escapeHtml(formatPlace(station.municipality))
-    : "Municipio sin asignar"
+  const place = escapeHtml(stationPlace(station))
   return `<strong>${escapeHtml(stationTitle(station))}</strong><span>${place}</span><span>${escapeHtml(stationStatusLabel(station))}</span><span>${escapeHtml(detail)}</span>`
 }
 
@@ -359,7 +395,7 @@ function readingDetail(pollutant: Pollutant, value: number | undefined): string 
 }
 
 function tooltipHtml(industry: Industry) {
-  const place = escapeHtml(formatPlace(industry.municipality))
+  const place = escapeHtml(placeWithDepartment(industry.municipality, industry.department))
   const vereda = industry.vereda ? ` · ${escapeHtml(formatPlace(industry.vereda))}` : ""
   const source = escapeHtml(industry.sourceRaw || "Fuente sin tipo")
   const fuel = escapeHtml(industry.fuel)

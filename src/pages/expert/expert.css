@@ -1,4 +1,4 @@
-/* Vista de usuario experto. Reutiliza los tokens de ../app/dashboard.css. */
+/* Vista de usuario experto. Reutiliza los tokens de ../standard/dashboard.css. */
 
 .expert {
   --brush: #1a4dd9;
@@ -121,7 +121,8 @@
 
 /* Mapa */
 
-.expert-map {
+/* Más específico que .map-frame de dashboard.css, que ubica el mapa del usuario común. */
+.expert-layout > .expert-map {
   grid-column: 1;
   grid-row: 2 / span 2;
 }

@@ -1,11 +1,11 @@
+import { EMISSION_SOURCE_OPTIONS } from "../data/industries"
 import { POLLUTANTS, type Pollutant } from "../domain/airQuality"
-import { SOURCE_OPTIONS, type SourceCategory } from "../domain/industry"
 import { SelectMenu } from "./SelectMenu"
 
 type EmissionFiltersProps = {
-  source: SourceCategory
+  source: string
   pollutant: Pollutant
-  onSource: (source: SourceCategory) => void
+  onSource: (source: string) => void
   onPollutant: (pollutant: Pollutant) => void
 }
 
@@ -20,8 +20,8 @@ export function EmissionFilters({
       <SelectMenu
         label="Fuente de emisión"
         value={source}
-        options={SOURCE_OPTIONS}
-        onChange={(id) => onSource(id as SourceCategory)}
+        options={EMISSION_SOURCE_OPTIONS}
+        onChange={onSource}
       />
       <SelectMenu
         label="Tipo de emisión"

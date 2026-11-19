@@ -2,14 +2,14 @@ import stationsCsv from "../../Data/air_quality_stations.csv?raw"
 import { haversineKm, polygonContains } from "../domain/geo"
 import type { Industry } from "../domain/industry"
 import type { Station, StationLink } from "../domain/station"
-import { municipalities } from "./municipalities"
+import { boyacaMunicipalities, municipalities, type MunicipalityFeature } from "./municipalities"
 
 const NEAREST_LIMIT = 3
 
 export const stations: Station[] = parseStations(stationsCsv)
   .map((station) => ({
     ...station,
-    municipality: municipalityAt(station.longitude, station.latitude),
+    ...territoryAt(station.longitude, station.latitude),
   }))
   .sort((left, right) => Number(left.id) - Number(right.id))
 
@@ -28,7 +28,7 @@ export function nearestIndustries(station: Station, candidates: Industry[]): Sta
     .slice(0, NEAREST_LIMIT)
 }
 
-function parseStations(csv: string): Omit<Station, "municipality">[] {
+function parseStations(csv: string): Omit<Station, "municipality" | "department">[] {
   const [header, ...rows] = csv.replace(/^\uFEFF/, "").trim().split(/\r?\n/)
   const columns = header.split(",").map((column) => column.trim())
   const idIndex = columns.indexOf("id")
@@ -52,13 +52,25 @@ function parseStations(csv: string): Omit<Station, "municipality">[] {
   })
 }
 
-function municipalityAt(longitude: number, latitude: number): string | null {
-  for (const feature of municipalities.features) {
-    const geometry = feature.geometry
-    if (!geometry) continue
-    const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates
-    const inside = polygons.some((polygon) => polygonContains(polygon, longitude, latitude))
-    if (inside) return feature.properties.name
+function territoryAt(
+  longitude: number,
+  latitude: number,
+): { municipality: string | null; department: string | null } {
+  for (const feature of [...municipalities.features, ...boyacaMunicipalities.features]) {
+    const name = featureName(feature, longitude, latitude)
+    if (name) return { municipality: name, department: feature.properties.department }
   }
-  return null
+  return { municipality: null, department: null }
+}
+
+function featureName(
+  feature: MunicipalityFeature,
+  longitude: number,
+  latitude: number,
+): string | null {
+  const geometry = feature.geometry
+  if (!geometry) return null
+  const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates
+  const inside = polygons.some((polygon) => polygonContains(polygon, longitude, latitude))
+  return inside ? feature.properties.name : null
 }

@@ -1,6 +1,6 @@
 # Funcionamiento de la vista experta
 
-Corre con `npm run dev:expert` → http://localhost:5174. El código está en `src/expert/`.
+Corre con `npm run dev:expert` → http://localhost:5174. El código está en `src/pages/expert/`.
 
 ## Filtros globales (arriba)
 
@@ -18,7 +18,7 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
   - El color es el nivel ICA de la Tabla No. 2 del DANE (`domain/icaLevels.ts`): Buena, Moderada, Dañina para grupos sensibles, Dañina, Muy dañina y Peligrosa. La leyenda del mapa muestra los 6 colores.
   - Gris = valor sin categoría ICA (NO₂ por debajo de 1.223 µg/m³); blanco = sin dato a esa hora.
   - Las estaciones dentro del recuadro llevan un anillo del mismo color que su línea en la serie.
-- **Industrias:** misma convención que la vista común (`src/map/industryMarkers.ts`): estrella roja = sancionada, estrella oscura = seguimiento o trámite. Las que quedan fuera del recuadro se atenúan.
+- **Industrias:** misma convención que la vista común (`src/layouts/map/industryMarkers.ts`): estrella roja = sancionada, estrella oscura = seguimiento o trámite. Las que quedan fuera del recuadro se atenúan.
 - La etiqueta azul cuenta las estaciones y las industrias dentro del recuadro.
 
 ## Serie de tiempo (`charts/MovingAverageSeries.tsx`)

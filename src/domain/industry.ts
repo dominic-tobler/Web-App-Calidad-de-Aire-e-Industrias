@@ -91,6 +91,44 @@ export function normalizeIndustry(raw: RawIndustry): Industry {
   }
 }
 
+const BOYACA_PLACE: Record<string, string> = {
+  raquira: "Ráquira",
+  chiquinquira: "Chiquinquirá",
+}
+
+function plainKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+}
+
+// Clave del filtro de fuente: el texto de TipoFuenteEmision, sin agrupar.
+export function emissionSourceKey(raw: string): string {
+  const value = raw.trim()
+  if (!value) return "sin-dato"
+  return plainKey(value)
+}
+
+export function emissionSourceLabel(raw: string): string {
+  const value = raw.trim()
+  if (!value) return "Sin dato"
+  const letters = value.replace(/[^\p{L}]/gu, "")
+  const lower = letters.toLocaleLowerCase("es")
+  const upper = letters.toLocaleUpperCase("es")
+  if (letters && letters === upper && letters !== lower) return formatPlace(value)
+  if (value === value.toLocaleLowerCase("es")) {
+    return value.charAt(0).toLocaleUpperCase("es") + value.slice(1)
+  }
+  return value
+}
+
+export function placeWithDepartment(name: string, department: string | null | undefined): string {
+  if (plainKey(department ?? "") !== "boyaca") return formatPlace(name)
+  const place = BOYACA_PLACE[plainKey(name)] ?? formatPlace(name)
+  return `${place}, Boyacá`
+}
+
 export function formatPlace(value: string): string {
   const titled = value
     .toLocaleLowerCase("es")

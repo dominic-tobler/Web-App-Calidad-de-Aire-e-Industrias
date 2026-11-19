@@ -1,4 +1,4 @@
-import measurementsUrl from "../../../Data/datos_24_25.csv?url"
+import measurementsUrl from "../../../../Data/datos_24_25.csv?url"
 import { VARIABLE_BY_CODE, type VariableId } from "../domain/variables"
 
 // Cada medición se guarda por índice de hora desde el 1 de enero de 2024 a las 00:00 UTC.

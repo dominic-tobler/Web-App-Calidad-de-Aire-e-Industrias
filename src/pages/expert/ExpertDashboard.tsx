@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import * as d3 from "d3"
-import { industries } from "../data/industries"
-import { stations } from "../data/stations"
-import { formatReading } from "../domain/airQuality"
-import { SOURCE_OPTIONS, statusLabel } from "../domain/industry"
-import type { Station } from "../domain/station"
+import { industries } from "../../data/industries"
+import { stations } from "../../data/stations"
+import { formatReading } from "../../domain/airQuality"
+import { SOURCE_OPTIONS, statusLabel } from "../../domain/industry"
+import type { Station } from "../../domain/station"
 import { CategoryBars, type BarGroup } from "./charts/CategoryBars"
 import { CorrelationMatrix } from "./charts/CorrelationMatrix"
 import { MovingAverageSeries } from "./charts/MovingAverageSeries"
@@ -41,6 +41,7 @@ import {
 } from "./domain/variables"
 import { exposureHours } from "./domain/icaLevels"
 import { ExpertMap } from "./map/ExpertMap"
+import "../standard/dashboard.css"
 import "./expert.css"
 
 const MIN_CORRELATION_DAYS = 5

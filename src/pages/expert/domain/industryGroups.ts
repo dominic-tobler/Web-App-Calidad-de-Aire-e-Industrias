@@ -1,5 +1,5 @@
-import rawIndustries from "../../../Data/industries.json"
-import { SOURCE_OPTIONS, type Industry, type IndustryStatus } from "../../domain/industry"
+import rawIndustries from "../../../../Data/industries.json"
+import { SOURCE_OPTIONS, type Industry, type IndustryStatus } from "../../../domain/industry"
 
 // «Todas» muestra a la vez las tres categorías en el mapa.
 export type StatusFilter = IndustryStatus | "todas"

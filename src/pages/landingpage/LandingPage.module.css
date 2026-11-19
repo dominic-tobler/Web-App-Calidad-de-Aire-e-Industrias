@@ -1,0 +1,115 @@
+.page {
+  min-height: 100dvh;
+  color-scheme: light;
+  --ink: #132f24;
+  --muted: #435d51;
+  --paper: #f5f7f3;
+  --green: #174833;
+  --lime: #dbf4a6;
+  font-family: "Aptos", "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+.page, .page *, .page *::before, .page *::after { box-sizing: border-box; }
+.page a:focus-visible { outline: 3px solid #237147; outline-offset: 5px; }
+.shell { width: min(1184px, calc(100% - 80px)); margin-inline: auto; }
+.masthead { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.brand { color: inherit; display: inline-flex; gap: 11px; align-items: center; font-size: .94rem; font-weight: 750; text-decoration: none; }
+.brandMark { display: grid; place-content: center; gap: 3px; width: 35px; height: 35px; border-radius: 10px; background: var(--green); }
+.brandMark i { display: block; width: 17px; height: 2px; border-radius: 2px; background: var(--lime); transform: skewX(-20deg); }
+.brandMark i:nth-child(2) { width: 12px; margin-left: 5px; }
+.brandMark i:nth-child(3) { width: 8px; }
+.region { color: var(--muted); font-size: .875rem; text-align: right; }
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 26px;
+  background: linear-gradient(113deg, #103326 15%, #174532 70%, #23533a);
+  color: #f9fcf4;
+  padding: 48px clamp(32px, 5.2vw, 76px) 52px;
+}
+.heroArt {
+  position: absolute;
+  z-index: -1;
+  right: -7%;
+  top: -45%;
+  width: 65%;
+  height: 185%;
+  transform: rotate(-23deg);
+  background: repeating-radial-gradient(ellipse at 67% 50%, transparent 0 13px, #d9f5ae42 14px 15px, transparent 16px 26px);
+  mask-image: linear-gradient(90deg, transparent 4%, #000 68%);
+  opacity: .75;
+  pointer-events: none;
+}
+.hero h1 { margin: 0; font-size: clamp(2.55rem, 5.4vw, 4.8rem); font-weight: 660; line-height: .99; letter-spacing: -.065em; }
+.hero h1 span { display: block; color: var(--lime); }
+.hero p { margin: 22px 0 0; max-width: 40ch; font-size: clamp(1rem, 2vw, 1.125rem); line-height: 1.55; color: #e3efe5; }
+.chooser { padding-block: 34px 44px; }
+.chooser h2 { margin: 0 0 18px; font-size: clamp(1.45rem, 3vw, 1.85rem); letter-spacing: -.042em; line-height: 1.15; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.card {
+  --accent: #edf4dc;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d8e3da;
+  border-radius: 19px;
+  background: #fff;
+  box-shadow: 0 4px 12px #193c2710;
+  transition: border-color .18s, box-shadow .18s;
+}
+.card.expert { --accent: #e3eee8; }
+.card:is(:hover, :focus-within) { border-color: #82a88e; box-shadow: 0 8px 22px #193c271a; }
+.preview { padding: 17px 21px 0; background: var(--accent); overflow: hidden; max-height: 202px; }
+.preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2.6;
+  height: auto;
+  object-fit: cover;
+  object-position: top;
+  border: 1px solid #23453329;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  box-shadow: 0 2px 10px #193c271c;
+}
+.cardBody { display: flex; flex: 1; flex-direction: column; gap: 9px; padding: 20px 23px 22px; }
+.card h3 { margin: 0; font-size: 1.56rem; letter-spacing: -.037em; }
+.card p { margin: 0 0 9px; max-width: 45ch; color: var(--muted); line-height: 1.5; }
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  text-align: center;
+  min-height: 45px;
+  padding: 8px 16px;
+  border: 1px solid var(--green);
+  border-radius: 9px;
+  background: var(--green);
+  color: white;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background .18s;
+}
+.card .button { margin-top: auto; }
+.button:hover { background: #246342; }
+.outline { background: #fff; color: var(--green); }
+.outline:hover { background: #e9f2eb; }
+@media (max-width: 660px) {
+  .shell { width: calc(100% - 32px); }
+  .masthead { min-height: 66px; }
+  .hero { border-radius: 19px; padding: 34px 22px 36px; }
+  .heroArt { right: -28%; width: 110%; opacity: .55; }
+  .hero p { margin-top: 17px; }
+  .chooser { padding-block: 26px 32px; }
+  .cards { grid-template-columns: 1fr; gap: 16px; }
+  .cardBody { padding: 16px 18px 18px; }
+  .card .button { align-self: stretch; }
+  .preview { padding: 12px 14px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *, .page *::before, .page *::after { transition: none !important; }
+}

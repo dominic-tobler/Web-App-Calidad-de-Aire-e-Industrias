@@ -1,35 +1,54 @@
-import { useMemo, useState } from "react"
-import { HourlyTrend } from "../charts/HourlyTrend"
-import { industries } from "../data/industries"
+import { useEffect, useMemo, useState } from "react"
+import { HourlyTrend } from "../../charts/HourlyTrend"
+import { EMISSION_SOURCE_ALL, industries } from "../../data/industries"
 import {
   averageReading,
   dailyAverageReadings,
   daysWithReadings,
   hourlySeries,
+  loadObservations,
   readingAt,
   readingsAtHour,
-} from "../data/observations"
-import { nearestIndustries, stations } from "../data/stations"
+} from "../../data/observations"
+import { nearestIndustries, stations } from "../../data/stations"
 import {
   airQualityLevel,
   formatReading,
   pollutantLabel,
   type AirQualityLevel,
   type Pollutant,
-} from "../domain/airQuality"
-import { formatDistance } from "../domain/geo"
-import { formatPlace, SOURCE_OPTIONS, statusLabel, type SourceCategory } from "../domain/industry"
-import { stationStatusLabel, stationTitle } from "../domain/station"
-import { formatHour, formatInstant, MONTHS, type Year } from "../domain/time"
-import { CundinamarcaMap } from "../map/CundinamarcaMap"
-import { useCommonState } from "../state/commonState"
-import { CalendarGrid } from "../ui/CalendarGrid"
-import { EmissionFilters } from "../ui/EmissionFilters"
+} from "../../domain/airQuality"
+import { formatDistance } from "../../domain/geo"
+import { emissionSourceKey, emissionSourceLabel, placeWithDepartment, statusLabel } from "../../domain/industry"
+import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
+import { formatHour, formatInstant, type Year } from "../../domain/time"
+import { CundinamarcaMap } from "../../layouts/map/CundinamarcaMap"
+import { useCommonState } from "../../state/commonState"
+import { CalendarGrid } from "../../layouts/CalendarGrid"
+import { EmissionFilters } from "../../layouts/EmissionFilters"
 import "./dashboard.css"
 
 export function CommonDashboard() {
   const { state, setDate, setHour, setPollutant, setSelectedStation, setSource } = useCommonState()
   const [calendar, setCalendar] = useState(() => ({ year: state.year, month: state.month }))
+  const [observationsState, setObservationsState] = useState<"loading" | "ready" | "error">("loading")
+  const [observationsError, setObservationsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    loadObservations()
+      .then(() => {
+        if (alive) setObservationsState("ready")
+      })
+      .catch((error: unknown) => {
+        if (!alive) return
+        setObservationsError(error instanceof Error ? error.message : String(error))
+        setObservationsState("error")
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   function shiftCalendar(delta: number) {
     setCalendar((current) => {
@@ -43,7 +62,7 @@ export function CommonDashboard() {
     () =>
       industries.filter((industry) => {
         if (industry.status === "tramite") return false
-        return state.source === "todos" || industry.source === state.source
+        return state.source === EMISSION_SOURCE_ALL || emissionSourceKey(industry.sourceRaw) === state.source
       }),
     [state.source],
   )
@@ -55,7 +74,7 @@ export function CommonDashboard() {
   )
   const hourReadings = useMemo(
     () => readingsAtHour(state.pollutant, state.year, state.month, state.day, state.hour),
-    [state.pollutant, state.year, state.month, state.day, state.hour],
+    [observationsState, state.pollutant, state.year, state.month, state.day, state.hour],
   )
   const series = useMemo(
     () =>
@@ -66,19 +85,19 @@ export function CommonDashboard() {
         state.day,
         state.selectedStationId,
       ),
-    [state.pollutant, state.year, state.month, state.day, state.selectedStationId],
+    [observationsState, state.pollutant, state.year, state.month, state.day, state.selectedStationId],
   )
   const daySeries = useMemo(
     () => hourlySeries(state.pollutant, state.year, state.month, state.day, null),
-    [state.pollutant, state.year, state.month, state.day],
+    [observationsState, state.pollutant, state.year, state.month, state.day],
   )
   const markedDays = useMemo(
     () => daysWithReadings(state.pollutant, calendar.year, calendar.month),
-    [state.pollutant, calendar.year, calendar.month],
+    [observationsState, state.pollutant, calendar.year, calendar.month],
   )
   const dayLevels = useMemo(
     () => monthDayLevels(state.pollutant, calendar.year, calendar.month),
-    [state.pollutant, calendar.year, calendar.month],
+    [observationsState, state.pollutant, calendar.year, calendar.month],
   )
   const selectedDay =
     calendar.year === state.year && calendar.month === state.month ? state.day : null
@@ -103,8 +122,11 @@ export function CommonDashboard() {
       <header className="dashboard-header">
         <h1>Calidad del aire en Cundinamarca</h1>
         <p className="header-context">
-          {formatInstant(state.year, state.month, state.day)} · {formatHour(state.hour)} UTC ·{" "}
-          {pollutantLabel(state.pollutant)}
+          {observationsState === "loading"
+            ? "Cargando mediciones…"
+            : observationsState === "error"
+              ? observationsError
+              : `${formatInstant(state.year, state.month, state.day)} · ${formatHour(state.hour)} UTC · ${pollutantLabel(state.pollutant)}`}
         </p>
       </header>
 
@@ -117,27 +139,6 @@ export function CommonDashboard() {
             onPollutant={setPollutant}
           />
           <section className="calendar-block">
-            <div className="month-nav">
-              <button
-                type="button"
-                onClick={() => shiftCalendar(-1)}
-                disabled={calendar.year === 2024 && calendar.month === 0}
-                aria-label="Mes anterior"
-              >
-                ‹
-              </button>
-              <span>
-                {MONTHS[calendar.month]} {calendar.year}
-              </span>
-              <button
-                type="button"
-                onClick={() => shiftCalendar(1)}
-                disabled={calendar.year === 2025 && calendar.month === 11}
-                aria-label="Mes siguiente"
-              >
-                ›
-              </button>
-            </div>
             <CalendarGrid
               year={calendar.year}
               month={calendar.month}
@@ -145,6 +146,10 @@ export function CommonDashboard() {
               markedDays={markedDays}
               dayLevels={dayLevels}
               onDay={(day) => setDate(calendar.year, calendar.month, day)}
+              onPreviousMonth={() => shiftCalendar(-1)}
+              onNextMonth={() => shiftCalendar(1)}
+              previousMonthDisabled={calendar.year === 2024 && calendar.month === 0}
+              nextMonthDisabled={calendar.year === 2025 && calendar.month === 11}
             />
             <div className="day-scale">
               <p>{dayLevel ? `Nivel del día · ${dayLevel.label}` : "Sin mediciones este día"}</p>
@@ -174,7 +179,7 @@ export function CommonDashboard() {
             <h2>{selectedStation ? stationTitle(selectedStation) : "Estación seleccionada"}</h2>
             <p>
               {selectedStation
-                ? `${selectedStation.municipality ? formatPlace(selectedStation.municipality) : "Municipio sin asignar"} · ${stationStatusLabel(selectedStation)}`
+                ? `${stationPlace(selectedStation)} · ${stationStatusLabel(selectedStation)}`
                 : "Las líneas van a las industrias más cercanas"}
             </p>
           </header>
@@ -198,9 +203,9 @@ export function CommonDashboard() {
                     {nearest.map(({ industry, distanceKm }) => (
                       <li key={industry.id}>
                         <span>
-                          <strong>{formatPlace(industry.municipality)}</strong>
+                          <strong>{placeWithDepartment(industry.municipality, industry.department)}</strong>
                           <span className="nearest-meta">
-                            {sourceLabel(industry.source)} · {statusLabel(industry.status)}
+                            {emissionSourceLabel(industry.sourceRaw)} · {statusLabel(industry.status)}
                           </span>
                         </span>
                         <span className="nearest-distance">{formatDistance(distanceKm)}</span>
@@ -247,18 +252,11 @@ function monthDayLevels(
 }
 
 function coverageMessage(pollutant: Pollutant, measured: number, hour: number): string {
-  if (pollutant === "ica") {
-    return "La muestra no incluye el índice de calidad. Elige PM2.5, PM10, NO₂, NOx o SO₂."
-  }
   if (measured === 0) {
-    return "Este día no está en la muestra. Las lecturas disponibles son del 22 de enero de 2024."
+    return `No hay mediciones de ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
   }
   const noun = measured === 1 ? "estación tiene" : "estaciones tienen"
   return `${measured} ${noun} ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
-}
-
-function sourceLabel(source: SourceCategory): string {
-  return SOURCE_OPTIONS.find((option) => option.id === source)?.label ?? source
 }
 
 function formatCoordinate(value: number): string {

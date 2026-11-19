@@ -1,4 +1,4 @@
-import type { Pollutant } from "../../domain/airQuality"
+import type { Pollutant } from "../../../domain/airQuality"
 import { icaCuts, icaLevel, type IcaLevel } from "./icaLevels"
 
 // Variables de datos_24_25.csv. `code` es el nombre de la columna `variable`.
