@@ -32,7 +32,7 @@ import {
   type StationLink,
 } from "../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "./industryMarkers"
-import { flyZoom, smoothMapOptions } from "./smoothMap"
+import { attachSmoothWheel, flyZoom, smoothMapOptions } from "./smoothMap"
 
 type CundinamarcaMapProps = {
   industries: Industry[]
@@ -96,6 +96,7 @@ export function CundinamarcaMap({
         attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
         maxZoom: 18,
         maxNativeZoom: 16,
+        updateWhenZooming: false,
       },
     ).addTo(map)
 
@@ -154,6 +155,7 @@ export function CundinamarcaMap({
     linksLayerRef.current = layerGroup().addTo(map)
     stationsLayerRef.current = layerGroup().addTo(map)
     map.on("click", () => selectStationRef.current(null))
+    const detachWheel = attachSmoothWheel(map)
     mapRef.current = map
 
     const fit = () => {
@@ -177,6 +179,7 @@ export function CundinamarcaMap({
     observer.observe(host)
 
     return () => {
+      detachWheel()
       observer.disconnect()
       map.remove()
       mapRef.current = null

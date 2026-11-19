@@ -21,7 +21,7 @@ import { boyacaMunicipalities, municipalities } from "../../../data/municipaliti
 import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../../domain/industry"
 import { stationPlace, stationStatusLabel, stationTitle, type Station } from "../../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "../../../layouts/map/industryMarkers"
-import { flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
+import { attachSmoothWheel, flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
 import type { GeoBox } from "../domain/geoBox"
 
 
@@ -96,7 +96,12 @@ export function ExpertMap({
 
     tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-      { attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ", maxZoom: 18, maxNativeZoom: 16 },
+      {
+        attribution: "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ",
+        maxZoom: 18,
+        maxNativeZoom: 16,
+        updateWhenZooming: false,
+      },
     ).addTo(map)
 
     const boyaca = geoJSON(boyacaMunicipalities, {
@@ -142,6 +147,7 @@ export function ExpertMap({
     industriesLayerRef.current = layerGroup().addTo(map)
     brushLayerRef.current = layerGroup().addTo(map)
     stationsLayerRef.current = layerGroup().addTo(map)
+    const detachWheel = attachSmoothWheel(map)
     mapRef.current = map
 
     const bounds = boundaries.getBounds().pad(0)
@@ -160,6 +166,7 @@ export function ExpertMap({
     observer.observe(host)
 
     return () => {
+      detachWheel()
       observer.disconnect()
       map.remove()
       mapRef.current = null

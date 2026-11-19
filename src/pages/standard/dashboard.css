@@ -314,6 +314,10 @@ select:focus-visible {
   inset: 0;
 }
 
+.map-frame .leaflet-tile {
+  backface-visibility: hidden;
+}
+
 .map-frame .leaflet-container {
   z-index: 0;
 }
