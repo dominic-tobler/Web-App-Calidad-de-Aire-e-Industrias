@@ -29,7 +29,7 @@ export type AirQualityLevel = (typeof AIR_QUALITY_LEVELS)[number]
 
 // Cortes de referencia en µg/m³ para las cinco bandas del diseño.
 // NOx usa los de NO₂: la muestra no trae un índice propio.
-const THRESHOLDS: Record<Exclude<Pollutant, "ica">, readonly number[]> = {
+export const THRESHOLDS: Record<Exclude<Pollutant, "ica">, readonly number[]> = {
   pm25: [12, 35, 55, 150],
   pm10: [54, 154, 254, 354],
   no2: [40, 100, 200, 400],

@@ -35,6 +35,31 @@ npm run dev
 
 Use ctrl + c to stop the local development server, or simply close the terminal
 
+### Running the Expert View
+
+The expert-user dashboard runs as a separate app on its own port, so it does not mix with the common-user view:
+
+```bash
+npm run dev:expert
+```
+
+- The expert view will be available at **`http://localhost:5174`**.
+- Both views can run at the same time (one terminal each): `npm run dev` → 5173 (common user) and `npm run dev:expert` → 5174 (expert).
+- Build / preview: `npm run build:expert` writes to `dist-expert/`, and `npm run preview:expert` serves it at `http://localhost:4174`.
+
+| File | Purpose |
+| :--- | :--- |
+| `expert.html` | HTML entry of the expert view |
+| `vite.expert.config.ts` | Vite config for the expert view (port 5174, serves `expert.html` at `/`) |
+| `src/expert/` | Expert dashboard: map with box selection, moving-average series, correlation matrix and industry histograms |
+| `src/map/industryMarkers.ts` | Industry star convention shared by both maps (red = sanctioned, dark = follow-up / in process) |
+
+Data used by the expert view (all in `Data/`):
+
+- `datos_24_25.csv`: hourly station measurements (2024-01-01 to 2025-05-27) for PM2.5, PM10, O3, NO2, SO2, CO, Temp, WDS, WDD and RAIN. Values ≥ 9000 are treated as missing. The file is fetched at runtime, so the first load takes a moment.
+- `industries.json`: now includes `ClassCode` (R1–R3), a short code for the sanction reason in `Class`. It is created in `Preprocessing/industry_cleaning.ipynb` (section *Sanction reason codes*).
+- `air_quality_stations.csv` and `municipios-cundinamarca.json`: station locations and municipality boundaries.
+
 ---
 
 ## Tech Stack
