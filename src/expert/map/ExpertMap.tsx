@@ -22,6 +22,7 @@ import { formatPlace, statusLabel, type Industry } from "../../domain/industry"
 import { stationStatusLabel, stationTitle, type Station } from "../../domain/station"
 import { STAR_PATH, STATUS_FILL } from "../../map/industryMarkers"
 import type { GeoBox } from "../domain/geoBox"
+import { ICA_LEVELS } from "../domain/icaLevels"
 
 
 type ExpertMapProps = {
@@ -33,6 +34,7 @@ type ExpertMapProps = {
   stationFill: Record<string, string>
   stationRing: Record<string, string>
   stationDetail: (station: Station) => string
+  hourLabel: string
   onSelection: (box: GeoBox | null) => void
 }
 
@@ -62,6 +64,7 @@ export function ExpertMap({
   stationFill,
   stationRing,
   stationDetail,
+  hourLabel,
   onSelection,
 }: ExpertMapProps) {
   const hostRef = useRef<HTMLDivElement>(null)
@@ -289,9 +292,9 @@ export function ExpertMap({
       const picked = selectedStationIds.has(station.id)
       const point = circleMarker([station.latitude, station.longitude], {
         pane: "stations",
-        radius: picked ? 8 : 6.5,
+        radius: picked ? 9 : 6.5,
         color: picked ? (stationRing[station.id] ?? BRUSH_COLOR) : "#1a3c32",
-        weight: picked ? 4 : 1.5,
+        weight: picked ? 3 : 1.5,
         fillColor: stationFill[station.id] ?? NEUTRAL_FILL,
         fillOpacity: 1,
         bubblingMouseEvents: true,
@@ -342,6 +345,8 @@ export function ExpertMap({
         </button>
       </div>
 
+      <div className="hour-badge">Hora del mapa · {hourLabel}</div>
+
       {municipality && <div className="municipality-label">{municipality}</div>}
 
       <div className="map-footer">
@@ -363,13 +368,16 @@ export function ExpertMap({
             </span>
           </div>
         </div>
-        <div className="contamination-scale">
-          <p>Nivel de contaminación</p>
-          <div className="scale-row">
-            <span>Bajo</span>
-            <div className="scale-bar" />
-            <span>Alto</span>
-          </div>
+        <div className="contamination-scale ica-legend">
+          <p>Índice de calidad del aire (ICA)</p>
+          <ul>
+            {ICA_LEVELS.map((level) => (
+              <li key={level.id} title={`${level.label} · ICA ${level.ica}`}>
+                <i style={{ background: level.color }} />
+                {level.short}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

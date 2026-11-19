@@ -1,10 +1,12 @@
 import measurementsUrl from "../../../Data/datos_24_25.csv?url"
-import { VARIABLE_BY_CODE, VARIABLES, type VariableId } from "../domain/variables"
+import { VARIABLE_BY_CODE, type VariableId } from "../domain/variables"
 
 // Cada medición se guarda por índice de hora desde el 1 de enero de 2024 a las 00:00 UTC.
 export const BASE_MS = Date.UTC(2024, 0, 1)
 export const HOUR_MS = 3_600_000
 const MISSING_AT_OR_ABOVE = 9000
+// PM2.5 y PM10 traen miles de lecturas exactas de 985 µg/m³ (tope del equipo); se toman como faltantes.
+const PM_SATURATION = 985
 const MIN_CORRELATION_PAIRS = 24
 
 export type MeasurementStore = {
@@ -66,27 +68,19 @@ export function hoursPerDay(window: TimeWindow): number {
     : 24 - window.hourFrom + window.hourTo + 1
 }
 
-// Media del periodo por estación; colorea las estaciones del mapa.
-export function stationMeans(
+// Valor registrado por cada estación en una hora; colorea todas las estaciones del mapa.
+export function stationValuesAt(
   store: MeasurementStore,
   variable: VariableId,
-  window: TimeWindow,
+  hour: number,
 ): Record<string, number> {
-  const means: Record<string, number> = {}
+  const readings: Record<string, number> = {}
+  if (hour < 0 || hour >= store.totalHours) return readings
   for (const stationId of store.stationIds) {
-    const values = store.series.get(seriesKey(stationId, variable))
-    if (!values) continue
-    let sum = 0
-    let count = 0
-    for (let hour = Math.max(0, window.startHour); hour <= Math.min(window.endHour, store.totalHours - 1); hour += 1) {
-      const value = values[hour]
-      if (Number.isNaN(value) || !hourIncluded(hour, window)) continue
-      sum += value
-      count += 1
-    }
-    if (count > 0) means[stationId] = variable === "wdd" ? circularMeanOf(values, window) : sum / count
+    const value = store.series.get(seriesKey(stationId, variable))?.[hour]
+    if (value != null && !Number.isNaN(value)) readings[stationId] = value
   }
-  return means
+  return readings
 }
 
 // Media móvil de 24 horas de reloj por estación. Solo cuentan las horas de la franja
@@ -135,14 +129,13 @@ export function movingAverageSeries(
 }
 
 // Correlación de Pearson entre variables con la serie horaria promedio de las estaciones.
-// La dirección del viento se promedia como vector para no mezclar 359° con 1°.
 export function correlationMatrix(
   store: MeasurementStore,
   stationIds: readonly string[],
   startHour: number,
   endHour: number,
+  variables: VariableId[],
 ): CorrelationResult {
-  const variables = VARIABLES.map((item) => item.id)
   const start = Math.max(0, startHour)
   const end = Math.min(endHour, store.totalHours - 1)
   const length = Math.max(0, end - start + 1)
@@ -160,6 +153,21 @@ export function correlationMatrix(
     }
   }
   return { variables, r, n, hours: length }
+}
+
+// Primera hora con algún dato entre dos horas; sirve para abrir cada periodo donde hay mediciones.
+export function firstHourWithData(store: MeasurementStore, fromHour: number, toHour: number): number | null {
+  let first: number | null = null
+  for (const values of store.series.values()) {
+    const limit = Math.min(first ?? toHour, toHour, values.length - 1)
+    for (let hour = Math.max(0, fromHour); hour <= limit; hour += 1) {
+      if (!Number.isNaN(values[hour])) {
+        first = hour
+        break
+      }
+    }
+  }
+  return first
 }
 
 export function hourToDate(hour: number): Date {
@@ -215,18 +223,6 @@ function averageAcrossStations(
   return result
 }
 
-function circularMeanOf(values: Float32Array, window: TimeWindow): number {
-  let sin = 0
-  let cos = 0
-  for (let hour = Math.max(0, window.startHour); hour <= Math.min(window.endHour, values.length - 1); hour += 1) {
-    const value = values[hour]
-    if (Number.isNaN(value) || !hourIncluded(hour, window)) continue
-    sin += Math.sin((value * Math.PI) / 180)
-    cos += Math.cos((value * Math.PI) / 180)
-  }
-  return toDegrees(Math.atan2(sin, cos))
-}
-
 function toDegrees(radians: number): number {
   return ((radians * 180) / Math.PI + 360) % 360
 }
@@ -276,6 +272,7 @@ function parseMeasurements(csv: string): MeasurementStore {
     const stationId = cells[5]?.trim()
     const stamp = cells[0]
     if (!variable || !stationId || !Number.isFinite(value) || value >= MISSING_AT_OR_ABOVE) continue
+    if (value === PM_SATURATION && (variable.id === "pm25" || variable.id === "pm10")) continue
     const ms = Date.UTC(
       Number(stamp.slice(0, 4)),
       Number(stamp.slice(5, 7)) - 1,

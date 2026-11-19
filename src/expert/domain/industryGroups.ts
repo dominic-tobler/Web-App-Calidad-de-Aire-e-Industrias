@@ -1,7 +1,11 @@
 import rawIndustries from "../../../Data/industries.json"
 import { SOURCE_OPTIONS, type Industry, type IndustryStatus } from "../../domain/industry"
 
-export const STATUS_OPTIONS: ReadonlyArray<{ id: IndustryStatus; label: string }> = [
+// «Todas» muestra a la vez las tres categorías en el mapa.
+export type StatusFilter = IndustryStatus | "todas"
+
+export const STATUS_OPTIONS: ReadonlyArray<{ id: StatusFilter; label: string }> = [
+  { id: "todas", label: "Todas" },
   { id: "seguimiento", label: "En seguimiento" },
   { id: "tramite", label: "En trámite" },
   { id: "sancionada", label: "Sancionadas" },

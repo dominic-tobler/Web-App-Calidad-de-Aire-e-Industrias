@@ -1,4 +1,5 @@
-import { airQualityLevel, type AirQualityLevel, type Pollutant } from "../../domain/airQuality"
+import type { Pollutant } from "../../domain/airQuality"
+import { icaCuts, icaLevel, type IcaLevel } from "./icaLevels"
 
 // Variables de datos_24_25.csv. `code` es el nombre de la columna `variable`.
 export const VARIABLES = [
@@ -30,12 +31,21 @@ export function variableById(id: VariableId): Variable {
   return VARIABLES.find((item) => item.id === id) ?? VARIABLES[0]
 }
 
-// Solo PM2.5, PM10, NO₂ y SO₂ tienen cortes de calidad del aire definidos.
-export function variableLevel(id: VariableId, value: number): AirQualityLevel | null {
-  const pollutant = variableById(id).pollutant
-  return pollutant ? airQualityLevel(pollutant, value) : null
+// Nivel ICA según la Tabla No. 2 del DANE (ver icaLevels.ts).
+export function variableLevel(id: VariableId, value: number): IcaLevel | null {
+  return icaLevel(id, value)
 }
 
+// La serie de tiempo solo muestra contaminantes.
+export const POLLUTANT_VARIABLES = VARIABLES.filter((item) =>
+  ["pm25", "pm10", "o3", "no2", "so2", "co"].includes(item.id),
+)
+
+// La matriz no usa la dirección del viento (variable circular).
+export const CORRELATION_VARIABLES: VariableId[] = VARIABLES.map((item) => item.id).filter(
+  (id) => id !== "wdd",
+)
+
 export function hasLevels(id: VariableId): boolean {
-  return variableById(id).pollutant !== null
+  return icaCuts(id) !== null
 }

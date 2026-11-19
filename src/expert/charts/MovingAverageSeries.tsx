@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import * as d3 from "d3"
-import { AIR_QUALITY_LEVELS, THRESHOLDS } from "../../domain/airQuality"
+import { exposureHours, icaBands, icaCuts } from "../domain/icaLevels"
 import { hourToDate, type SeriesPoint, type StationSeries } from "../data/measurements"
 import { variableById, type VariableId } from "../domain/variables"
 
@@ -10,11 +10,11 @@ type MovingAverageSeriesProps = {
   variable: VariableId
   startHour: number
   endHour: number
+  mapHour: number
+  onMapHour: (hour: number) => void
   emptyMessage: string
 }
 
-// Bandas suaves del boceto, en el orden de AIR_QUALITY_LEVELS.
-const BAND_FILLS = ["#d1ebd1", "#fffab8", "#fad4bd", "#f7b8b8", "#dbc2e5"]
 const FONT = "IBM Plex Sans, sans-serif"
 
 export function MovingAverageSeries({
@@ -23,6 +23,8 @@ export function MovingAverageSeries({
   variable,
   startHour,
   endHour,
+  mapHour,
+  onMapHour,
   emptyMessage,
 }: MovingAverageSeriesProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -40,7 +42,7 @@ export function MovingAverageSeries({
       const width = wrap.clientWidth
       const height = wrap.clientHeight
       if (width < 60 || height < 60) return
-      const margin = { top: 24, right: 64, bottom: 40, left: 52 }
+      const margin = { top: 24, right: 72, bottom: 40, left: 52 }
       const innerWidth = width - margin.left - margin.right
       const innerHeight = height - margin.top - margin.bottom
 
@@ -50,42 +52,56 @@ export function MovingAverageSeries({
       const plot = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`)
 
       const values = series.flatMap((item) => item.points.flatMap((point) => (point.value == null ? [] : [point.value])))
-      const cuts = meta.pollutant ? THRESHOLDS[meta.pollutant] : null
+      const bands = icaBands(variable)
       const dataMax = values.length ? (d3.max(values) ?? 1) : 1
-      const dataMin = values.length ? (d3.min(values) ?? 0) : 0
-      // Se muestra al menos la banda Moderado para que el nivel tenga contexto.
-      const yMax = cuts ? Math.max(dataMax, cuts[1]) : dataMax
-      const yMin = cuts || dataMin >= 0 ? 0 : dataMin
+      // El eje cubre los datos y, si la primera banda arranca en 0, al menos esa banda completa.
+      const startsAtZero = bands[0]?.low === 0
+      const contextTop = startsAtZero ? bands[0].high * 1.08 : 0
+      const yMax = Math.max(dataMax * 1.05, contextTop, 1)
+      const yMin = 0
 
       const x = d3
         .scaleUtc()
         .domain([hourToDate(startHour), hourToDate(endHour)])
         .range([0, innerWidth])
       const y = d3.scaleLinear().domain([yMin, yMax]).nice().range([innerHeight, 0])
+      const yTop = y.domain()[1]
 
-      if (cuts) {
-        const edges = [0, ...cuts, Number.POSITIVE_INFINITY]
-        AIR_QUALITY_LEVELS.forEach((level, index) => {
-          const low = edges[index]
-          const high = Math.min(edges[index + 1], y.domain()[1])
-          if (low >= y.domain()[1]) return
-          plot
-            .append("rect")
-            .attr("x", 0)
-            .attr("width", innerWidth)
-            .attr("y", y(high))
-            .attr("height", Math.max(0, y(low) - y(high)))
-            .attr("fill", BAND_FILLS[index])
-          plot
-            .append("text")
-            .attr("x", innerWidth + 6)
-            .attr("y", (y(low) + y(high)) / 2)
-            .attr("dy", "0.35em")
-            .attr("fill", "#666")
-            .attr("font-size", 10)
-            .attr("font-family", FONT)
-            .text(level.label)
-        })
+      for (const band of bands) {
+        if (band.low >= yTop) continue
+        const high = Math.min(band.high, yTop)
+        plot
+          .append("rect")
+          .attr("x", 0)
+          .attr("width", innerWidth)
+          .attr("y", y(high))
+          .attr("height", Math.max(0, y(band.low) - y(high)))
+          .attr("fill", band.level.band)
+          .append("title")
+          .text(`${band.level.label} (ICA ${band.level.ica}): ${formatCut(band.low)}–${formatCut(band.high)} ${meta.unit}`)
+        plot
+          .append("text")
+          .attr("x", innerWidth + 6)
+          .attr("y", (y(band.low) + y(high)) / 2)
+          .attr("dy", "0.35em")
+          .attr("fill", "#555")
+          .attr("font-size", 10)
+          .attr("font-family", FONT)
+          .text(band.level.short)
+      }
+
+      const note = icaCuts(variable)?.note
+      const firstLow = bands[0]?.low ?? 0
+      if (note && firstLow > 0 && firstLow >= yTop) {
+        plot
+          .append("text")
+          .attr("x", innerWidth - 4)
+          .attr("y", 12)
+          .attr("text-anchor", "end")
+          .attr("fill", "#595959")
+          .attr("font-size", 11)
+          .attr("font-family", FONT)
+          .text(`${note}: desde ${formatCut(firstLow)} ${meta.unit}`)
       }
 
       plot
@@ -115,7 +131,7 @@ export function MovingAverageSeries({
         .attr("fill", "#1a2420")
         .attr("font-size", 11)
         .attr("font-family", FONT)
-        .text(`${meta.label} (${meta.unit}) · media móvil 24 h`)
+        .text(`${meta.label} (${meta.unit}) · media móvil ${exposureHours(variable)} h · bandas ICA`)
 
       plot
         .append("text")
@@ -144,6 +160,33 @@ export function MovingAverageSeries({
         .attr("stroke-linejoin", "round")
         .attr("d", (item) => line(item.points))
 
+      // Hora que colorea el mapa: línea fija con etiqueta.
+      if (mapHour >= startHour && mapHour <= endHour) {
+        const mx = x(hourToDate(mapHour))
+        plot
+          .append("line")
+          .attr("x1", mx)
+          .attr("x2", mx)
+          .attr("y1", 0)
+          .attr("y2", innerHeight)
+          .attr("stroke", "#1a4dd9")
+          .attr("stroke-width", 2)
+          .attr("pointer-events", "none")
+        const tag = d3.utcFormat("%d/%m %H:00")(hourToDate(mapHour))
+        const anchorEnd = mx > innerWidth - 90
+        plot
+          .append("text")
+          .attr("x", anchorEnd ? mx - 4 : mx + 4)
+          .attr("y", 12)
+          .attr("text-anchor", anchorEnd ? "end" : "start")
+          .attr("fill", "#1a4dd9")
+          .attr("font-size", 11)
+          .attr("font-weight", 600)
+          .attr("font-family", FONT)
+          .attr("pointer-events", "none")
+          .text(`Mapa · ${tag}`)
+      }
+
       if (values.length === 0) {
         plot
           .append("text")
@@ -167,15 +210,24 @@ export function MovingAverageSeries({
         .attr("visibility", "hidden")
         .attr("pointer-events", "none")
 
+      const hourAt = (px: number) => {
+        const hour = Math.round((x.invert(px).getTime() - hourToDate(0).getTime()) / 3_600_000)
+        return Math.max(startHour, Math.min(endHour, hour))
+      }
+
       plot
         .append("rect")
         .attr("width", innerWidth)
         .attr("height", innerHeight)
         .attr("fill", "transparent")
+        .style("cursor", "pointer")
+        .on("click", (event: PointerEvent) => {
+          const [px] = d3.pointer(event)
+          onMapHour(hourAt(px))
+        })
         .on("pointermove", (event: PointerEvent) => {
           const [px] = d3.pointer(event)
-          const date = x.invert(px)
-          const hour = Math.round((date.getTime() - hourToDate(0).getTime()) / 3_600_000)
+          const hour = hourAt(px)
           const offset = hour - startHour
           rule.attr("x1", x(hourToDate(hour))).attr("x2", x(hourToDate(hour))).attr("visibility", "visible")
           const rows = series
@@ -188,7 +240,7 @@ export function MovingAverageSeries({
                   row.value == null ? "—" : row.value.toLocaleString("es-CO", { maximumFractionDigits: 1 })
                 }</b></span>`,
             )
-            .join("")}`
+            .join("")}<em>Clic: usar esta hora en el mapa</em>`
           tip.hidden = false
           const left = margin.left + px + 14
           tip.style.left = `${left + tip.offsetWidth > width ? margin.left + px - tip.offsetWidth - 14 : left}px`
@@ -204,7 +256,7 @@ export function MovingAverageSeries({
     const observer = new ResizeObserver(draw)
     observer.observe(wrap)
     return () => observer.disconnect()
-  }, [colors, emptyMessage, endHour, series, startHour, variable])
+  }, [colors, emptyMessage, endHour, mapHour, onMapHour, series, startHour, variable])
 
   return (
     <div className="series-plot" ref={wrapRef}>
@@ -212,6 +264,10 @@ export function MovingAverageSeries({
       <div className="chart-tip" ref={tipRef} hidden />
     </div>
   )
+}
+
+function formatCut(value: number): string {
+  return value.toLocaleString("es-CO", { maximumFractionDigits: 1 })
 }
 
 function styleAxis(group: d3.Selection<SVGGElement, unknown, null, undefined>) {

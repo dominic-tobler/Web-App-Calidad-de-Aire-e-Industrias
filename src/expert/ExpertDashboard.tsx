@@ -3,19 +3,20 @@ import * as d3 from "d3"
 import { industries } from "../data/industries"
 import { stations } from "../data/stations"
 import { formatReading } from "../domain/airQuality"
-import { SOURCE_OPTIONS, type IndustryStatus } from "../domain/industry"
+import { SOURCE_OPTIONS, statusLabel } from "../domain/industry"
 import type { Station } from "../domain/station"
-import { formatHour } from "../domain/time"
 import { CategoryBars, type BarGroup } from "./charts/CategoryBars"
 import { CorrelationMatrix } from "./charts/CorrelationMatrix"
 import { MovingAverageSeries } from "./charts/MovingAverageSeries"
 import {
   correlationMatrix,
   dayStartHour,
+  firstHourWithData,
+  hourToDate,
   hourToIsoDate,
   loadMeasurements,
   movingAverageSeries,
-  stationMeans,
+  stationValuesAt,
   type MeasurementStore,
   type TimeWindow,
 } from "./data/measurements"
@@ -27,25 +28,36 @@ import {
   sanctionCode,
   sourceLabel,
   STATUS_OPTIONS,
+  type StatusFilter,
 } from "./domain/industryGroups"
-import { hasLevels, VARIABLES, variableById, variableLevel, type VariableId } from "./domain/variables"
+import { addDays, clampToPeriod, PERIODS, periodById, type PeriodId } from "./domain/periods"
+import {
+  CORRELATION_VARIABLES,
+  hasLevels,
+  POLLUTANT_VARIABLES,
+  variableById,
+  variableLevel,
+  type VariableId,
+} from "./domain/variables"
+import { exposureHours } from "./domain/icaLevels"
 import { ExpertMap } from "./map/ExpertMap"
 import "./expert.css"
 
-const DATA_FIRST_DAY = "2024-01-01"
-const DATA_LAST_DAY = "2025-05-27"
-const MIN_CORRELATION_DAYS = 7
+const MIN_CORRELATION_DAYS = 5
+const DEFAULT_RANGE_DAYS = 31
+// Sin clic en la serie, el mapa usa el mediodía (12:00 UTC) del primer día del rango.
+const DEFAULT_MAP_HOUR_OF_DAY = 12
 
 // Recuadro inicial sobre la Sabana Occidente, donde se concentran estaciones e industrias.
 const INITIAL_SELECTION: GeoBox = { south: 4.48, west: -74.3, north: 4.84, east: -74.05 }
 
 // Un color por estación, estable entre recortes.
-const STATION_PALETTE = [...d3.schemeTableau10, ...d3.schemeDark2, ...d3.schemeSet1.slice(0, 5)]
+const STATION_PALETTE = [...d3.schemeTableau10, ...d3.schemeDark2, "#17becf", "#bcbd22", "#393b79", "#8c6d31", "#843c39"]
 const STATION_COLORS: Record<string, string> = Object.fromEntries(
   stations.map((station, index) => [station.id, STATION_PALETTE[index % STATION_PALETTE.length]]),
 )
 
-const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
+const STATUS_ORDER = ["seguimiento", "tramite", "sancionada"] as const
 
 type LoadState =
   | { status: "loading" }
@@ -54,15 +66,17 @@ type LoadState =
 
 export function ExpertDashboard() {
   const [load, setLoad] = useState<LoadState>({ status: "loading" })
+  const [periodId, setPeriodId] = useState<PeriodId>("2024")
   const [dateFrom, setDateFrom] = useState("2024-01-01")
   const [dateTo, setDateTo] = useState("2024-01-31")
-  const [hourFrom, setHourFrom] = useState(0)
-  const [hourTo, setHourTo] = useState(23)
-  const [status, setStatus] = useState<IndustryStatus>("seguimiento")
+  const [pickedHour, setPickedHour] = useState<number | null>(null)
+  const [status, setStatus] = useState<StatusFilter>("todas")
   const [selection, setSelection] = useState<GeoBox | null>(INITIAL_SELECTION)
   const [variable, setVariable] = useState<VariableId>("pm25")
   const [corrFrom, setCorrFrom] = useState("2024-01-01")
-  const [corrTo, setCorrTo] = useState("2024-01-14")
+  const [corrTo, setCorrTo] = useState("2024-01-07")
+
+  const period = periodById(periodId)
 
   useEffect(() => {
     let alive = true
@@ -78,13 +92,46 @@ export function ExpertDashboard() {
 
   const store = load.status === "ready" ? load.store : null
 
+  // Cambiar de periodo reinicia los rangos desde el primer día con mediciones del periodo.
+  function choosePeriod(id: PeriodId) {
+    const next = periodById(id)
+    const firstHour = store ? firstHourWithData(store, dayStartHour(next.first), dayStartHour(next.last) + 23) : null
+    const start = firstHour == null ? next.first : hourToIsoDate(firstHour)
+    setPeriodId(id)
+    setDateFrom(start)
+    setDateTo(clampToPeriod(addDays(start, DEFAULT_RANGE_DAYS - 1), next))
+    setCorrFrom(start)
+    setCorrTo(clampToPeriod(addDays(start, 6), next))
+    setPickedHour(null)
+  }
+
+  function chooseDate(which: "from" | "to", value: string) {
+    if (!value) return
+    const date = clampToPeriod(value, period)
+    if (which === "from") setDateFrom(date)
+    else setDateTo(date)
+    setPickedHour(null)
+  }
+
+  function chooseCorrDate(which: "from" | "to", value: string) {
+    if (!value) return
+    const date = clampToPeriod(value, period)
+    if (which === "from") setCorrFrom(date)
+    else setCorrTo(date)
+  }
+
   const timeWindow = useMemo<TimeWindow>(() => {
     const [first, last] = dateFrom <= dateTo ? [dateFrom, dateTo] : [dateTo, dateFrom]
-    return { startHour: dayStartHour(first), endHour: dayStartHour(last) + 23, hourFrom, hourTo }
-  }, [dateFrom, dateTo, hourFrom, hourTo])
+    return { startHour: dayStartHour(first), endHour: dayStartHour(last) + 23, hourFrom: 0, hourTo: 23 }
+  }, [dateFrom, dateTo])
+
+  const mapHour =
+    pickedHour != null && pickedHour >= timeWindow.startHour && pickedHour <= timeWindow.endHour
+      ? pickedHour
+      : timeWindow.startHour + DEFAULT_MAP_HOUR_OF_DAY
 
   const visibleIndustries = useMemo(
-    () => industries.filter((industry) => industry.status === status),
+    () => (status === "todas" ? industries : industries.filter((industry) => industry.status === status)),
     [status],
   )
 
@@ -109,31 +156,33 @@ export function ExpertDashboard() {
   )
   const pickedStationIds = useMemo(() => pickedStations.map((station) => station.id), [pickedStations])
 
-  const means = useMemo(
-    () => (store ? stationMeans(store, variable, timeWindow) : {}),
-    [store, timeWindow, variable],
+  // Valor de cada estación (todas, no solo las del recuadro) en la hora del mapa.
+  const readings = useMemo(
+    () => (store ? stationValuesAt(store, variable, mapHour) : {}),
+    [mapHour, store, variable],
   )
   const stationFill = useMemo(() => {
     const fill: Record<string, string> = {}
-    for (const [id, value] of Object.entries(means)) {
+    for (const [id, value] of Object.entries(readings)) {
       fill[id] = variableLevel(variable, value)?.color ?? "#c9d3ce"
     }
     return fill
-  }, [means, variable])
+  }, [readings, variable])
 
   const stationDetail = useCallback(
     (station: Station) => {
       const meta = variableById(variable)
-      const value = means[station.id]
-      if (value == null) return `Sin ${meta.label} en el rango`
+      const value = readings[station.id]
+      const when = formatInstant(mapHour)
+      if (value == null) return `Sin ${meta.label} el ${when}`
       const level = variableLevel(variable, value)
-      return `${meta.label} medio ${formatReading(value)} ${meta.unit}${level ? ` · ${level.label}` : ""}`
+      return `${meta.label} ${formatReading(value)} ${meta.unit}${level ? ` · ${level.label}` : ""} · ${when}`
     },
-    [means, variable],
+    [mapHour, readings, variable],
   )
 
   const series = useMemo(
-    () => (store ? movingAverageSeries(store, pickedStationIds, variable, timeWindow) : []),
+    () => (store ? movingAverageSeries(store, pickedStationIds, variable, timeWindow, exposureHours(variable)) : []),
     [pickedStationIds, store, timeWindow, variable],
   )
 
@@ -144,16 +193,35 @@ export function ExpertDashboard() {
       : load.status === "error"
         ? load.message
         : corrDays < MIN_CORRELATION_DAYS
-          ? `Elige al menos ${MIN_CORRELATION_DAYS} días (una semana completa). Ahora: ${Math.max(0, corrDays)}.`
+          ? `Elige al menos ${MIN_CORRELATION_DAYS} días. Ahora: ${Math.max(0, corrDays)}.`
           : pickedStationIds.length === 0
             ? "El recuadro no incluye estaciones"
             : null
   const correlation = useMemo(() => {
     if (!store || corrMessage) return null
-    return correlationMatrix(store, pickedStationIds, dayStartHour(corrFrom), dayStartHour(corrTo) + 23)
+    return correlationMatrix(
+      store,
+      pickedStationIds,
+      dayStartHour(corrFrom),
+      dayStartHour(corrTo) + 23,
+      CORRELATION_VARIABLES,
+    )
   }, [corrFrom, corrMessage, corrTo, pickedStationIds, store])
 
   const barGroups = useMemo<BarGroup[]>(() => {
+    if (status === "todas") {
+      return [
+        {
+          title: "Estado de la industria",
+          counts: countBy(
+            pickedIndustries,
+            (industry) => statusLabel(industry.status),
+            3,
+            STATUS_ORDER.map((id) => statusLabel(id)),
+          ),
+        },
+      ]
+    }
     if (status === "sancionada") {
       return [
         {
@@ -194,55 +262,67 @@ export function ExpertDashboard() {
         : pickedStationIds.length === 0
           ? "El recuadro no incluye estaciones"
           : `Sin ${meta.label} para estas estaciones en el rango`
-  const statusName = STATUS_OPTIONS.find((option) => option.id === status)?.label.toLocaleLowerCase("es") ?? ""
+  const statusName =
+    status === "todas"
+      ? ""
+      : (STATUS_OPTIONS.find((option) => option.id === status)?.label.toLocaleLowerCase("es") ?? "")
 
   return (
     <div className="dashboard expert">
       <header className="dashboard-header expert-header">
         <h1>Calidad del aire en Cundinamarca</h1>
         <p className="header-context">
-          Vista experta · {formatDay(timeWindow.startHour)} – {formatDay(timeWindow.endHour)} ·{" "}
-          {formatHour(hourFrom)}–{formatHour(hourTo)} UTC
+          Vista experta · {formatDay(timeWindow.startHour)} – {formatDay(timeWindow.endHour)} · Mapa:{" "}
+          {meta.label} el {formatInstant(mapHour)}
         </p>
       </header>
 
       <div className="expert-layout">
-        <section className="range-bar" aria-label="Rango de fechas y horas">
+        <section className="range-bar" aria-label="Periodo y rango de fechas">
+          <div className="range-group">
+            <span>Datos disponibles</span>
+            <div className="segmented" role="radiogroup" aria-label="Periodo con datos">
+              {PERIODS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={option.id === periodId}
+                  className={option.id === periodId ? "is-selected" : undefined}
+                  onClick={() => choosePeriod(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="range-group">
             <span>Rango de fechas (inicio – fin)</span>
             <div className="range-inputs">
               <input
                 type="date"
                 value={dateFrom}
-                min={DATA_FIRST_DAY}
-                max={DATA_LAST_DAY}
+                min={period.first}
+                max={period.last}
                 aria-label="Fecha de inicio"
-                onChange={(event) => event.target.value && setDateFrom(event.target.value)}
+                onChange={(event) => chooseDate("from", event.target.value)}
               />
               <span aria-hidden="true">–</span>
               <input
                 type="date"
                 value={dateTo}
-                min={DATA_FIRST_DAY}
-                max={DATA_LAST_DAY}
+                min={period.first}
+                max={period.last}
                 aria-label="Fecha de fin"
-                onChange={(event) => event.target.value && setDateTo(event.target.value)}
+                onChange={(event) => chooseDate("to", event.target.value)}
               />
-            </div>
-          </div>
-          <div className="range-group">
-            <span>Rango de horas (inicio – fin)</span>
-            <div className="range-inputs">
-              <HourSelect label="Hora de inicio" value={hourFrom} onChange={setHourFrom} />
-              <span aria-hidden="true">–</span>
-              <HourSelect label="Hora de fin" value={hourTo} onChange={setHourTo} />
             </div>
           </div>
         </section>
 
-        <section className="status-filter" aria-label="Estado de las industrias">
-          <span>Estado de las industrias</span>
-          <div className="segmented" role="radiogroup" aria-label="Estado de las industrias">
+        <section className="status-filter" aria-label="Industrias en el mapa">
+          <span>Industrias en el mapa</span>
+          <div className="segmented" role="radiogroup" aria-label="Industrias en el mapa">
             {STATUS_OPTIONS.map((option) => (
               <button
                 key={option.id}
@@ -267,6 +347,7 @@ export function ExpertDashboard() {
           stationFill={stationFill}
           stationRing={STATION_COLORS}
           stationDetail={stationDetail}
+          hourLabel={`${formatInstant(mapHour)} · ${stationCountLabel(Object.keys(readings).length)}`}
           onSelection={setSelection}
         />
 
@@ -274,11 +355,11 @@ export function ExpertDashboard() {
           <header className="chart-header">
             <h2>Comportamiento media móvil por estación</h2>
             <div className="chart-header-tools">
-              <span className="chart-note">Una línea por estación seleccionada</span>
+              <span className="chart-note">Clic en la serie para elegir la hora del mapa</span>
               <label className="dark-select">
                 <span>Variable:</span>
                 <select value={variable} onChange={(event) => setVariable(event.target.value as VariableId)}>
-                  {VARIABLES.map((item) => (
+                  {POLLUTANT_VARIABLES.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.label}
                     </option>
@@ -297,6 +378,13 @@ export function ExpertDashboard() {
             {!hasLevels(variable) && series.length > 0 && (
               <li className="key-note">{meta.label} no tiene bandas de calidad del aire</li>
             )}
+            {pickedHour != null && (
+              <li className="key-action">
+                <button type="button" onClick={() => setPickedHour(null)}>
+                  Volver al mediodía del primer día
+                </button>
+              </li>
+            )}
           </ul>
           <MovingAverageSeries
             series={series}
@@ -304,6 +392,8 @@ export function ExpertDashboard() {
             variable={variable}
             startHour={timeWindow.startHour}
             endHour={timeWindow.endHour}
+            mapHour={mapHour}
+            onMapHour={setPickedHour}
             emptyMessage={seriesEmpty}
           />
         </section>
@@ -320,19 +410,19 @@ export function ExpertDashboard() {
                 <input
                   type="date"
                   value={corrFrom}
-                  min={DATA_FIRST_DAY}
-                  max={DATA_LAST_DAY}
+                  min={period.first}
+                  max={period.last}
                   aria-label="Inicio del periodo de correlación"
-                  onChange={(event) => event.target.value && setCorrFrom(event.target.value)}
+                  onChange={(event) => chooseCorrDate("from", event.target.value)}
                 />
                 <span aria-hidden="true">–</span>
                 <input
                   type="date"
                   value={corrTo}
-                  min={DATA_FIRST_DAY}
-                  max={DATA_LAST_DAY}
+                  min={period.first}
+                  max={period.last}
                   aria-label="Fin del periodo de correlación"
-                  onChange={(event) => event.target.value && setCorrTo(event.target.value)}
+                  onChange={(event) => chooseCorrDate("to", event.target.value)}
                 />
               </div>
             </div>
@@ -369,6 +459,9 @@ export function ExpertDashboard() {
                 </aside>
               )}
             </div>
+            {status === "todas" && (
+              <p className="chart-foot">Elige un estado para ver fuente y combustible o la razón de sanción.</p>
+            )}
           </section>
         </div>
       </div>
@@ -376,19 +469,15 @@ export function ExpertDashboard() {
   )
 }
 
-function HourSelect({ label, value, onChange }: { label: string; value: number; onChange: (hour: number) => void }) {
-  return (
-    <select aria-label={label} value={value} onChange={(event) => onChange(Number(event.target.value))}>
-      {HOURS.map((hour) => (
-        <option key={hour} value={hour}>
-          {formatHour(hour)}
-        </option>
-      ))}
-    </select>
-  )
+function stationCountLabel(count: number): string {
+  if (count === 0) return "sin datos a esta hora"
+  return `${count} ${count === 1 ? "estación" : "estaciones"} con dato`
 }
 
 function formatDay(hour: number): string {
-  const [year, month, day] = hourToIsoDate(hour).split("-")
-  return `${day}/${month}/${year}`
+  return d3.utcFormat("%d/%m/%Y")(hourToDate(hour))
+}
+
+function formatInstant(hour: number): string {
+  return `${d3.utcFormat("%d/%m/%Y %H:00")(hourToDate(hour))} UTC`
 }
