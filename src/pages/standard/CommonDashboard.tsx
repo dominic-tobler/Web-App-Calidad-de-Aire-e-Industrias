@@ -23,6 +23,7 @@ import { emissionSourceKey, emissionSourceLabel, placeWithDepartment, statusLabe
 import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
 import { formatHour, formatInstant, type Year } from "../../domain/time"
 import { CundinamarcaMap } from "../../layouts/map/CundinamarcaMap"
+import { LevelTip } from "../../layouts/PollutantTip"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
 import { EmissionFilters } from "../../layouts/EmissionFilters"
@@ -152,7 +153,10 @@ export function CommonDashboard() {
               nextMonthDisabled={calendar.year === 2025 && calendar.month === 11}
             />
             <div className="day-scale">
-              <p>{dayLevel ? `Nivel del día · ${dayLevel.label}` : "Sin mediciones este día"}</p>
+              <p className="scale-caption">
+                <span>{dayLevel ? `Nivel del día · ${dayLevel.label}` : "Sin mediciones este día"}</span>
+                <LevelTip />
+              </p>
               <div className="scale-row">
                 <span>Bajo</span>
                 <div className="scale-bar" />

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react"
 type Option = {
   id: string
   label: string
+  hint?: string
 }
 
 type SelectMenuProps = {
@@ -11,6 +12,7 @@ type SelectMenuProps = {
   options: readonly Option[]
   onChange: (id: string) => void
   tone?: "dark" | "month" | "day" | "hour"
+  aside?: ReactNode
 }
 
 export function SelectMenu({
@@ -19,6 +21,7 @@ export function SelectMenu({
   options,
   onChange,
   tone = "dark",
+  aside,
 }: SelectMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -35,7 +38,10 @@ export function SelectMenu({
 
   return (
     <div className={`select-menu tone-${tone}`} ref={ref}>
-      <span>{label}</span>
+      <div className="field-label">
+        <span>{label}</span>
+        {aside}
+      </div>
       <button
         type="button"
         className="menu-button"
@@ -60,7 +66,8 @@ export function SelectMenu({
                 setOpen(false)
               }}
             >
-              {option.label}
+              <span className="menu-option-label">{option.label}</span>
+              {option.hint && <span className="menu-option-hint">{option.hint}</span>}
             </button>
           ))}
         </div>

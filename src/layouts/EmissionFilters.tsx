@@ -1,5 +1,6 @@
 import { EMISSION_SOURCE_OPTIONS } from "../data/industries"
 import { POLLUTANTS, type Pollutant } from "../domain/airQuality"
+import { PollutantTip } from "./PollutantTip"
 import { SelectMenu } from "./SelectMenu"
 
 type EmissionFiltersProps = {
@@ -26,7 +27,12 @@ export function EmissionFilters({
       <SelectMenu
         label="Tipo de emisión"
         value={pollutant}
-        options={POLLUTANTS}
+        options={POLLUTANTS.map((item) => ({
+          id: item.id,
+          label: item.label,
+          hint: item.plain,
+        }))}
+        aside={<PollutantTip pollutant={pollutant} />}
         onChange={(id) => onPollutant(id as Pollutant)}
       />
     </div>

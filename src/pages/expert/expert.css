@@ -202,6 +202,16 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
+  max-width: 168px;
+}
+
+.expert-map .territory-legend,
+.expert-map .symbol-row {
+  max-width: 152px;
+}
+
+.expert-map .symbol-caption {
+  max-width: 124px;
 }
 
 .brush-hint {

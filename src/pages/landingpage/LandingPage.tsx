@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
-import standardPreview from './assets/estandar-previa.webp'
-import expertPreview from './assets/experta-previa.webp'
+import standardPreview from './assets/preview-estandar.png'
+import expertPreview from './assets/preview-experto.png'
 import styles from './LandingPage.module.css'
 
 type ViewLinkProps = {
