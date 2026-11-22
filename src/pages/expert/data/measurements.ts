@@ -4,9 +4,8 @@ import { VARIABLE_BY_CODE, type VariableId } from "../domain/variables"
 // Cada medición se guarda por índice de hora desde el 1 de enero de 2024 a las 00:00 UTC.
 export const BASE_MS = Date.UTC(2024, 0, 1)
 export const HOUR_MS = 3_600_000
-const MISSING_AT_OR_ABOVE = 9000
-// PM2.5 y PM10 traen miles de lecturas exactas de 985 µg/m³ (tope del equipo); se toman como faltantes.
-const PM_SATURATION = 985
+// Los valores inválidos (9999, saturación 985, fuera de rango) ya se quitan en
+// Preprocessing/Limpiar_datos.ipynb: aquí cada fila del CSV es una medición válida.
 const MIN_CORRELATION_PAIRS = 24
 
 export type MeasurementStore = {
@@ -271,8 +270,7 @@ function parseMeasurements(csv: string): MeasurementStore {
     const value = Number(cells[2])
     const stationId = cells[5]?.trim()
     const stamp = cells[0]
-    if (!variable || !stationId || !Number.isFinite(value) || value >= MISSING_AT_OR_ABOVE) continue
-    if (value === PM_SATURATION && (variable.id === "pm25" || variable.id === "pm10")) continue
+    if (!variable || !stationId || !Number.isFinite(value)) continue
     const ms = Date.UTC(
       Number(stamp.slice(0, 4)),
       Number(stamp.slice(5, 7)) - 1,

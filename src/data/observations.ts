@@ -20,7 +20,8 @@ const VARIABLE_POLLUTANT: Record<string, Pollutant> = {
   O3: "o3",
 }
 
-const MISSING_AT_OR_ABOVE = 9000
+// Los valores inválidos (9999, saturación 985, fuera de rango) ya se quitan en
+// Preprocessing/Limpiar_datos.ipynb: aquí cada fila del CSV es una medición válida.
 
 const readingsByHour = new Map<string, Record<string, number>>()
 const seriesByStation = new Map<string, Array<number | null>>()
@@ -118,7 +119,7 @@ function parseObservations(csv: string): void {
     const value = Number(cells[2])
     const stationId = cells[5]?.trim()
     const stamp = cells[0]
-    if (!pollutant || !stationId || !Number.isFinite(value) || value >= MISSING_AT_OR_ABOVE) continue
+    if (!pollutant || !stationId || !Number.isFinite(value)) continue
     const year = Number(stamp.slice(0, 4))
     const month = Number(stamp.slice(5, 7)) - 1
     const day = Number(stamp.slice(8, 10))

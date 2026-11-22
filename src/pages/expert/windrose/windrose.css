@@ -1,0 +1,269 @@
+/* Rosas de viento de la vista experta. Usa los tokens de dashboard.css y expert.css. */
+
+.expert-shell {
+  position: relative;
+}
+
+.view-switch.segmented {
+  position: absolute;
+  z-index: 5;
+  top: 20px;
+  right: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.view-switch.segmented button {
+  height: 34px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.windrose .month-bar {
+  justify-content: flex-start;
+  gap: 24px;
+}
+
+.windrose .month-bar .segmented button {
+  min-width: 46px;
+}
+
+.station-summary p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.windrose .roses-card {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+}
+
+.roses-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+}
+
+.roses-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 30px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4px 8px;
+  padding: 8px 8px 12px 12px;
+}
+
+.roses-col,
+.roses-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.roses-col em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.roses-row {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.rose-plot {
+  position: relative;
+  min-height: 0;
+  border-radius: var(--radius-sm);
+  background: #fcfdfc;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.rose-plot svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.rose-n {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rose-n.is-low {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.roses-side {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 14px 14px 6px;
+}
+
+.side-block {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.side-block h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.side-count {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #1a4dd9;
+  color: #ffffff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.side-note {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.ica-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.ica-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ica-list i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.segmented.compact button {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.fan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+
+.fan-list b {
+  display: inline-block;
+  min-width: 36px;
+  color: #1a4dd9;
+}
+
+.upwind-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upwind-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.upwind-list strong,
+.upwind-list em {
+  display: block;
+}
+
+.upwind-list strong {
+  font-weight: 600;
+}
+
+.upwind-list em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.upwind-list em.status-sancionada {
+  color: var(--danger);
+}
+
+.upwind-distance {
+  flex: none;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaflet-tooltip.fan-label {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: #1a4dd9;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.leaflet-tooltip.fan-label::before {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .view-switch.segmented {
+    position: static;
+    margin: 12px 16px 0;
+  }
+
+  .roses-body {
+    grid-template-columns: 1fr;
+  }
+
+  .roses-grid {
+    height: 720px;
+  }
+}

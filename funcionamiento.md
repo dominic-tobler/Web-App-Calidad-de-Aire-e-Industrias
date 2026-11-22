@@ -58,3 +58,12 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 
 - La vista común todavía usa su escala anterior de 5 niveles (`src/domain/airQuality.ts`), no la del ICA.
 - Si se suelta el mouse fuera del mapa, el recuadro no se confirma.
+
+## Rosas de viento (`src/pages/expert/windrose/`)
+
+- El botón arriba a la derecha (`ExpertShell.tsx`) cambia entre «Serie y correlación» (la vista experta de siempre, sin cambios) y «Rosas de viento». Las dos quedan montadas y conservan sus filtros.
+- **Filtro de tiempo:** solo el mes (ene–may de 2024 y 2025). Cada cálculo usa todas las horas del mes en hora local (UTC−5).
+- **Mapa:** solo aparecen las estaciones con algún dato de viento (WDD). Un clic elige una estación; las que no tienen viento en el mes salen tenues. El color es el nivel ICA de la media mensual del contaminante del abanico.
+- **Rosas 2×2:** filas PM2.5 y PM10, columnas día (06:00–17:59) y noche (18:00–05:59). 16 direcciones; el largo del pétalo es el % de horas con viento desde esa dirección, apilado por nivel ICA de cada hora. Las 4 rosas comparten escala. Centro = % de calma (viento < 0,5 m/s; si falta la velocidad, la hora no cuenta como calma). Aviso si n < 48 h.
+- **Abanico:** las 3 direcciones con más carga del contaminante (suma de concentraciones = frecuencia × concentración), día y noche juntos, con radio de 15 km. Las industrias dentro del abanico se resaltan y se listan como «viento arriba». Si la estación no mide el PM elegido, el abanico usa el otro.
+- Cálculos en `windRose.ts`; no modifica los datos ni `measurements.ts`.

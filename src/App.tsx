@@ -1,7 +1,7 @@
 import { createBrowserRouter, Link, RouterProvider } from 'react-router-dom';
 import LandingPage from './pages/landingpage/LandingPage'
 import { CommonStateProvider } from './state/commonState'
-import { ExpertDashboard } from './pages/expert/ExpertDashboard';
+import { ExpertShell } from './pages/expert/ExpertShell';
 import { CommonDashboard } from './pages/standard/CommonDashboard';
 
 const router = createBrowserRouter([
@@ -20,7 +20,7 @@ const router = createBrowserRouter([
     ),
   },
   { path: "/standard", element: <CommonDashboard /> },
-  { path: "/expert", element: <ExpertDashboard /> },
+  { path: "/expert", element: <ExpertShell /> },
 ]);
 
 function App() {
