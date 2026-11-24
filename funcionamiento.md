@@ -4,8 +4,8 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 
 ## Filtros globales (arriba)
 
-- **Datos disponibles** (`domain/periods.ts`): hay dos periodos, ene–may 2024 y ene–may 2025. Las fechas del filtro y de la matriz solo se pueden elegir dentro del periodo activo; una fecha fuera se ajusta al borde. Al cambiar de periodo, los rangos arrancan en el primer día con mediciones (en 2025 los datos empiezan el 23 de enero; en 2024 terminan el 21 de mayo).
-- **Rango de fechas** (`ExpertDashboard.tsx`): define la serie de tiempo. Ya no hay filtro de horas: se usan las 24 horas.
+- **Datos disponibles** (`domain/periods.ts`): hay dos periodos, ene–may 2024 y ene–may 2025. Las fechas del filtro solo se pueden elegir dentro del periodo activo; una fecha fuera se ajusta al borde. Al cambiar de periodo, los rangos arrancan en el primer día con mediciones (en 2025 los datos empiezan el 23 de enero; en 2024 terminan el 21 de mayo).
+- **Rango de fechas** (`ExpertDashboard.tsx`): define la serie de tiempo y qué semanas se pueden elegir en las matrices de correlación. Ya no hay filtro de horas: se usan las 24 horas.
 - **Industrias en el mapa:** Todas (default), En seguimiento, En trámite o Sancionadas. Filtra las estrellas del mapa y decide qué histogramas se muestran.
 
 ## Mapa (`map/ExpertMap.tsx`)
@@ -31,20 +31,24 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 - **Bandas Bajo → Peligroso:** solo existen para PM2.5, PM10, NO₂ y SO₂ (cortes en `THRESHOLDS` de `domain/airQuality.ts`).
 - Al pasar el cursor se ven los valores de cada estación en esa hora.
 
-## Matriz de correlación (`charts/CorrelationMatrix.tsx`)
+## Matrices de correlación (`charts/CorrelationMatrix.tsx`)
 
-- Tiene su propio periodo, con un mínimo de 5 días. Con menos muestra un aviso y no calcula.
-- Para cada hora promedia las estaciones del recuadro. Luego calcula Pearson entre 9 variables (sin dirección del viento, `CORRELATION_VARIABLES` en `domain/variables.ts`) con las horas en que ambas tienen dato.
-- La celda queda gris con «—» si hay menos de 24 horas en común.
-- Escala roja (+1) → blanca (0) → azul (−1). El tooltip muestra r y el número de horas usadas.
-- Cálculo en `correlationMatrix` de `data/measurements.ts`.
+- Son dos matrices lado a lado con las mismas filas y columnas: **Sin lluvia** (izquierda) y **Con lluvia** (derecha). Comparten la leyenda de −1 a 1.
+- **Filtro de tiempo:** solo por semana, de lunes a domingo (`weeksCovering` en `domain/periods.ts`). El selector muestra solo las semanas con al menos un día dentro del rango de fechas del mapa. Ejemplo: del 5 al 21 de febrero de 2024 aparecen las semanas 05/02–11/02, 12/02–18/02 y 19/02–25/02.
+- Cada semana se calcula **completa**, aunque tenga días antes o después del rango del mapa. Cuando pasa, el aviso junto al selector lo dice. Si se cambia el rango y la semana elegida ya no lo toca, se usa la primera semana disponible.
+- Para cada hora promedia las estaciones del recuadro. Una hora es «con lluvia» si el promedio de precipitación (RAIN) de las estaciones del recuadro con dato es mayor que 0 mm, y «sin lluvia» en otro caso. Las horas sin dato de RAIN (estaciones que no la miden o fallas de medición) cuentan como sin lluvia, para no perder las demás variables de esas horas.
+- Pearson entre 8 variables: PM2.5, PM10, O₃, NO₂, SO₂, CO, temperatura y velocidad del viento (`CORRELATION_VARIABLES` en `domain/variables.ts`). Ya no entran la dirección del viento ni la precipitación, que es la que separa las matrices.
+- El título de cada matriz dice cuántas horas usa. La celda queda gris con «—» si hay menos de 12 horas en común (`MIN_CORRELATION_PAIRS`). El umbral es bajo porque una semana tiene pocas horas con lluvia.
+- Si ninguna estación del recuadro mide precipitación, todas las horas van a «Sin lluvia» y el panel «Con lluvia» muestra un aviso. También hay aviso si en la semana no hubo horas con o sin lluvia.
+- Escala roja (+1) → blanca (0) → azul (−1). El tooltip muestra la matriz, r y el número de horas usadas.
+- Cálculo en `correlationByRain` de `data/measurements.ts`.
 
 ## Industrias seleccionadas (`charts/CategoryBars.tsx`)
 
-- Cuenta las industrias del estado elegido dentro del recuadro.
+- Cuenta las industrias del estado elegido dentro del recuadro. La tarjeta de las matrices mide lo que necesitan las dos matrices según la altura disponible (`onContentWidth`) y las barras se quedan con el resto de la fila, con un mínimo de 280 px.
 - **Todas:** una barra por estado (seguimiento, trámite, sancionada).
 - **Seguimiento / trámite:** barras de tipo de fuente de emisión (categorías de `sourceCategory`) y de tipo de combustible. Las categorías de combustible por encima de 4 se agrupan en «Resto»; el tooltip dice cuáles son.
-- **Sancionadas:** barras de razón de sanción por código (R1–R3), con un cuadro al lado que trae el texto completo de cada código y su conteo.
+- **Sancionadas:** barras de razón de sanción por código (R1–R3), con un cuadro debajo que trae el texto completo de cada código y su conteo.
 - Los códigos salen de la columna `ClassCode` de `Data/industries.json`, creada en `Preprocessing/industry_cleaning.ipynb`.
 
 ## Datos (`data/measurements.ts`)
@@ -53,6 +57,7 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 - Los valores ≥ 9000 se toman como faltantes, igual que en la vista común.
 - PM2.5 y PM10 exactamente iguales a 985 µg/m³ (3.178 filas, tope del equipo) también se toman como faltantes (`PM_SATURATION`).
 - Cada estación y variable se guarda como un arreglo indexado por hora desde el 01/01/2024 00:00 UTC. Los días del filtro y las etiquetas usan el día civil de Colombia: la medianoche local es las 05:00 UTC.
+- **Hora de referencia única:** todas las gráficas de las dos vistas (mapa, serie, matrices, rosas de viento, calendario y tendencia horaria de la vista común) usan la hora de Colombia (COT, UTC−5). El desfase está en un solo lugar, `COLOMBIA_OFFSET_HOURS` en `src/domain/time.ts`. La vista común convierte cada fila al leerla (`colombiaFromUtc`) y la experta al mostrar o filtrar (`hourOfDay`, `hourToDate`, `dayStartHour`).
 
 ## Pendientes conocidos
 

@@ -29,7 +29,9 @@ export function CategoryBars({ groups, axisLabel }: CategoryBarsProps) {
       svg.selectAll("*").remove()
       if (width < 80 || height < 60) return
 
-      const labelWidth = 118
+      // La tarjeta es angosta: las etiquetas ceden ancho a las barras cuando falta espacio.
+      const labelWidth = Math.round(Math.min(118, Math.max(76, width * 0.4)))
+      const labelChars = Math.max(10, Math.floor(labelWidth / 6.4))
       const right = 34
       const titleHeight = 22
       const groupGap = 12
@@ -87,7 +89,7 @@ export function CategoryBars({ groups, axisLabel }: CategoryBarsProps) {
           .attr("font-size", 12)
           .attr("font-family", FONT)
           .attr("fill", "#1a2420")
-          .text((item) => truncate(item.label, 18))
+          .text((item) => truncate(item.label, labelChars))
           .append("title")
           .text((item) => item.title ?? item.label)
 

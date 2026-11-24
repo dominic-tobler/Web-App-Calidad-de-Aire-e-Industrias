@@ -7,10 +7,10 @@ import { COLOMBIA_TIME_LABEL } from "../../domain/time"
 import { SOURCE_OPTIONS, statusLabel } from "../../domain/industry"
 import type { Station } from "../../domain/station"
 import { CategoryBars, type BarGroup } from "./charts/CategoryBars"
-import { CorrelationMatrix } from "./charts/CorrelationMatrix"
+import { CorrelationMatrix, type CorrelationPanel } from "./charts/CorrelationMatrix"
 import { MovingAverageSeries } from "./charts/MovingAverageSeries"
 import {
-  correlationMatrix,
+  correlationByRain,
   dayStartHour,
   firstHourWithData,
   hourToDate,
@@ -31,7 +31,7 @@ import {
   STATUS_OPTIONS,
   type StatusFilter,
 } from "./domain/industryGroups"
-import { addDays, clampToPeriod, PERIODS, periodById, type PeriodId } from "./domain/periods"
+import { addDays, clampToPeriod, PERIODS, periodById, weeksCovering, type PeriodId } from "./domain/periods"
 import {
   CORRELATION_VARIABLES,
   hasLevels,
@@ -45,8 +45,9 @@ import { ExpertMap } from "./map/ExpertMap"
 import "../standard/dashboard.css"
 import "./expert.css"
 
-const MIN_CORRELATION_DAYS = 5
 const DEFAULT_RANGE_DAYS = 31
+// Ancho mínimo de la tarjeta de barras cuando la matriz toma el ancho que necesita.
+const MIN_BARS_WIDTH = 280
 // Sin clic en la serie, el mapa usa el mediodía (12:00 COT) del primer día del rango.
 const DEFAULT_MAP_HOUR_OF_DAY = 12
 
@@ -75,8 +76,10 @@ export function ExpertDashboard() {
   const [status, setStatus] = useState<StatusFilter>("todas")
   const [selection, setSelection] = useState<GeoBox | null>(INITIAL_SELECTION)
   const [variable, setVariable] = useState<VariableId>("pm25")
-  const [corrFrom, setCorrFrom] = useState("2024-01-01")
-  const [corrTo, setCorrTo] = useState("2024-01-07")
+  // Lunes de la semana elegida para las matrices; si deja de estar en el rango del mapa,
+  // se usa la primera semana disponible.
+  const [corrWeek, setCorrWeek] = useState<string | null>(null)
+  const [matrixWidth, setMatrixWidth] = useState<number | null>(null)
 
   const period = periodById(periodId)
 
@@ -102,8 +105,7 @@ export function ExpertDashboard() {
     setPeriodId(id)
     setDateFrom(start)
     setDateTo(clampToPeriod(addDays(start, DEFAULT_RANGE_DAYS - 1), next))
-    setCorrFrom(start)
-    setCorrTo(clampToPeriod(addDays(start, 6), next))
+    setCorrWeek(null)
     setPickedHour(null)
   }
 
@@ -113,13 +115,6 @@ export function ExpertDashboard() {
     if (which === "from") setDateFrom(date)
     else setDateTo(date)
     setPickedHour(null)
-  }
-
-  function chooseCorrDate(which: "from" | "to", value: string) {
-    if (!value) return
-    const date = clampToPeriod(value, period)
-    if (which === "from") setCorrFrom(date)
-    else setCorrTo(date)
   }
 
   const timeWindow = useMemo<TimeWindow>(() => {
@@ -188,27 +183,51 @@ export function ExpertDashboard() {
     [pickedStationIds, store, timeWindow, variable],
   )
 
-  const corrDays = Math.round((dayStartHour(corrTo) - dayStartHour(corrFrom)) / 24) + 1
+  // Semanas (lunes a domingo) con al menos un día dentro del rango de fechas del mapa.
+  const corrWeeks = useMemo(() => weeksCovering(dateFrom, dateTo), [dateFrom, dateTo])
+  const weekFrom = corrWeek != null && corrWeeks.includes(corrWeek) ? corrWeek : corrWeeks[0]
+  const weekTo = addDays(weekFrom, 6)
+  const [rangeFirst, rangeLast] = dateFrom <= dateTo ? [dateFrom, dateTo] : [dateTo, dateFrom]
+  const weekExceedsRange = weekFrom < rangeFirst || weekTo > rangeLast
+  const weekNote = weekExceedsRange
+    ? "Usa la semana completa, incluidos días fuera del rango del mapa"
+    : "Solo semanas que tocan el rango del mapa"
+
   const corrMessage =
     load.status === "loading"
       ? "Cargando mediciones…"
       : load.status === "error"
         ? load.message
-        : corrDays < MIN_CORRELATION_DAYS
-          ? `Elige al menos ${MIN_CORRELATION_DAYS} días. Ahora: ${Math.max(0, corrDays)}.`
-          : pickedStationIds.length === 0
-            ? "El recuadro no incluye estaciones"
-            : null
+        : pickedStationIds.length === 0
+          ? "El recuadro no incluye estaciones"
+          : null
   const correlation = useMemo(() => {
     if (!store || corrMessage) return null
-    return correlationMatrix(
-      store,
-      pickedStationIds,
-      dayStartHour(corrFrom),
-      dayStartHour(corrTo) + 23,
-      CORRELATION_VARIABLES,
-    )
-  }, [corrFrom, corrMessage, corrTo, pickedStationIds, store])
+    return correlationByRain(store, pickedStationIds, dayStartHour(weekFrom), dayStartHour(weekTo) + 23, CORRELATION_VARIABLES)
+  }, [corrMessage, pickedStationIds, store, weekFrom, weekTo])
+  const corrFoot = `Pearson con el promedio horario de ${pickedStationIds.length} ${
+    pickedStationIds.length === 1 ? "estación" : "estaciones"
+  } · con lluvia = precipitación media del recuadro > 0 mm · sin dato de lluvia cuenta como sin lluvia`
+  const corrPanels = useMemo<CorrelationPanel[]>(() => {
+    if (!correlation) return []
+    return [
+      {
+        title: `Sin lluvia · ${hoursLabel(correlation.dry.hours)}`,
+        result: correlation.dry,
+        message: correlation.dry.hours === 0 ? "Sin horas sin lluvia esta semana" : null,
+      },
+      {
+        title: `Con lluvia · ${hoursLabel(correlation.wet.hours)}`,
+        result: correlation.wet,
+        message:
+          correlation.rainStations === 0
+            ? "Ninguna estación del recuadro mide precipitación: todas las horas cuentan como sin lluvia"
+            : correlation.wet.hours === 0
+              ? "No llovió en las estaciones del recuadro esta semana"
+              : null,
+      },
+    ]
+  }, [correlation])
 
   const barGroups = useMemo<BarGroup[]>(() => {
     if (status === "todas") {
@@ -400,38 +419,46 @@ export function ExpertDashboard() {
           />
         </section>
 
-        <div className="bottom-row">
+        <div
+          className="bottom-row"
+          style={
+            matrixWidth == null
+              ? undefined
+              : { gridTemplateColumns: `minmax(0, ${matrixWidth + 2}px) minmax(${MIN_BARS_WIDTH}px, 1fr)` }
+          }
+        >
           <section className="chart-card matrix-card" aria-label="Matriz de correlación">
             <header className="chart-header">
               <h2>Matriz de correlación</h2>
               <span className="chart-note">contaminantes y meteorología</span>
             </header>
             <div className="matrix-range">
-              <span>Periodo (mín. {MIN_CORRELATION_DAYS} días)</span>
-              <div className="range-inputs compact">
-                <input
-                  type="date"
-                  value={corrFrom}
-                  min={period.first}
-                  max={period.last}
-                  aria-label="Inicio del periodo de correlación"
-                  onChange={(event) => chooseCorrDate("from", event.target.value)}
-                />
-                <span aria-hidden="true">–</span>
-                <input
-                  type="date"
-                  value={corrTo}
-                  min={period.first}
-                  max={period.last}
-                  aria-label="Fin del periodo de correlación"
-                  onChange={(event) => chooseCorrDate("to", event.target.value)}
-                />
-              </div>
+              <label className="week-select">
+                <span>Semana (lun – dom)</span>
+                <select
+                  value={weekFrom}
+                  aria-label="Semana de las matrices de correlación"
+                  onChange={(event) => setCorrWeek(event.target.value)}
+                >
+                  {corrWeeks.map((monday) => (
+                    <option key={monday} value={monday}>
+                      {formatWeek(monday)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className={weekExceedsRange ? "week-note is-outside" : "week-note"} title={weekNote}>
+                {weekNote}
+              </span>
             </div>
-            <CorrelationMatrix result={correlation} message={corrMessage} />
-            <p className="chart-foot">
-              Pearson con el promedio horario de {pickedStationIds.length}{" "}
-              {pickedStationIds.length === 1 ? "estación" : "estaciones"} · todas las horas del periodo
+            <CorrelationMatrix
+              variables={CORRELATION_VARIABLES}
+              panels={corrPanels}
+              message={corrMessage}
+              onContentWidth={setMatrixWidth}
+            />
+            <p className="chart-foot" title={corrFoot}>
+              {corrFoot}
             </p>
           </section>
 
@@ -474,6 +501,18 @@ export function ExpertDashboard() {
 function stationCountLabel(count: number): string {
   if (count === 0) return "sin datos a esta hora"
   return `${count} ${count === 1 ? "estación" : "estaciones"} con dato`
+}
+
+function hoursLabel(hours: number): string {
+  return `${hours.toLocaleString("es-CO")} h`
+}
+
+// «05/02 – 11/02/2024», con el año del domingo.
+function formatWeek(monday: string): string {
+  const sunday = addDays(monday, 6)
+  const short = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+  const start = monday.slice(0, 4) === sunday.slice(0, 4) ? short(monday) : `${short(monday)}/${monday.slice(0, 4)}`
+  return `${start} – ${short(sunday)}/${sunday.slice(0, 4)}`
 }
 
 function formatDay(hour: number): string {

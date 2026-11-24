@@ -51,7 +51,7 @@ npm run dev:expert
 | :--- | :--- |
 | `expert.html` | HTML entry of the expert view |
 | `vite.expert.config.ts` | Vite config for the expert view (port 5174, serves `expert.html` at `/`) |
-| `src/pages/expert/` | Expert dashboard: map with box selection, moving-average series, correlation matrix and industry histograms |
+| `src/pages/expert/` | Expert dashboard: map with box selection, moving-average series, weekly correlation matrices (dry vs. rainy hours) and industry histograms |
 | `src/layouts/map/industryMarkers.ts` | Industry star convention shared by both maps (red = sanctioned, dark = follow-up / in process) |
 
 Data used by the expert view (all in `Data/`):

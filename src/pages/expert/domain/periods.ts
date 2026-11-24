@@ -22,3 +22,18 @@ export function addDays(isoDate: string, days: number): string {
   const [year, month, day] = isoDate.split("-").map(Number)
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
 }
+
+// Lunes de la semana (lunes a domingo) que contiene la fecha.
+export function weekStart(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number)
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  return addDays(isoDate, -((weekday + 6) % 7))
+}
+
+// Semanas (lunes) que tienen al menos un día dentro del rango [from, to].
+export function weeksCovering(from: string, to: string): string[] {
+  const [first, last] = from <= to ? [from, to] : [to, from]
+  const weeks: string[] = []
+  for (let monday = weekStart(first); monday <= last; monday = addDays(monday, 7)) weeks.push(monday)
+  return weeks
+}

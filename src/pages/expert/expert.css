@@ -387,7 +387,8 @@
   grid-row: 3;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 47fr) minmax(0, 53fr);
+  /* Dos matrices de correlación lado a lado; las barras de industrias van más angostas. */
+  grid-template-columns: minmax(0, 70fr) minmax(0, 30fr);
   gap: 12px;
 }
 
@@ -399,6 +400,22 @@
 
 .bars-body .bars-plot {
   flex: 1;
+}
+
+/* Con la tarjeta angosta, el cuadro de códigos de sanción va debajo de las barras. */
+.bars-body.has-legend {
+  flex-direction: column;
+}
+
+.bars-body.has-legend .bars-plot {
+  min-height: 110px;
+}
+
+.bars-body.has-legend .code-legend {
+  width: auto;
+  max-width: none;
+  max-height: 45%;
+  margin: 0 12px 10px;
 }
 
 .code-legend {
@@ -479,12 +496,65 @@
 
 .matrix-range {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 6px 14px 0;
+  gap: 6px 12px;
+  padding: 6px 14px 4px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.week-select {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.week-select select {
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.week-select select:hover {
+  border-color: #c5d0ca;
+}
+
+/* La altura del gráfico no debe depender del ancho de la tarjeta (su ancho sale de la altura):
+   encabezado, selector y pie no cambian de alto al angostarse. */
+.matrix-card .chart-header .chart-note,
+.week-note {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.matrix-card .matrix-range {
+  flex-wrap: nowrap;
+}
+
+.matrix-card .chart-foot {
+  display: -webkit-box;
+  height: calc(2 * 1.4em + 8px);
+  overflow: hidden;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.week-note.is-outside {
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .chart-tip em {

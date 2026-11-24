@@ -1,3 +1,4 @@
+import { COLOMBIA_OFFSET_HOURS } from "../../../domain/time"
 import { BASE_MS, HOUR_MS, hourOfDay, seriesKey, type MeasurementStore } from "../data/measurements"
 import { ICA_LEVELS, icaLevel } from "../domain/icaLevels"
 import { PERIODS } from "../domain/periods"
@@ -15,8 +16,8 @@ export const DIRECTION_LABELS = [
 export const CALM_MS = 0.5
 // Con menos horas que esto se muestra un aviso en la rosa.
 export const MIN_ROSE_HOURS = 48
-// Los datos vienen en UTC; Bogotá está en UTC-5.
-const LOCAL_OFFSET_HOURS = -5
+// Los datos vienen en UTC; todo se clasifica en hora de Colombia (COT, UTC−5) con la
+// misma constante que el resto de la app (COLOMBIA_OFFSET_HOURS en domain/time.ts).
 // Día: 06:00 a 17:59 hora local. Noche: 18:00 a 05:59.
 const DAY_START = 6
 const NIGHT_START = 18
@@ -61,17 +62,14 @@ export function monthById(id: string): MonthOption {
 
 // Horas (índice desde 2024-01-01 00:00 UTC) que cubre el mes completo en hora local.
 export function monthHourRange(option: MonthOption): [number, number] {
-  const start = Date.UTC(option.year, option.month, 1, -LOCAL_OFFSET_HOURS)
-  const end = Date.UTC(option.year, option.month + 1, 1, -LOCAL_OFFSET_HOURS)
+  const start = Date.UTC(option.year, option.month, 1, -COLOMBIA_OFFSET_HOURS)
+  const end = Date.UTC(option.year, option.month + 1, 1, -COLOMBIA_OFFSET_HOURS)
   return [Math.round((start - BASE_MS) / HOUR_MS), Math.round((end - BASE_MS) / HOUR_MS) - 1]
 }
 
-export function localHour(hour: number): number {
-  return (hourOfDay(hour) + LOCAL_OFFSET_HOURS + 24) % 24
-}
-
+// hourOfDay ya devuelve la hora de Colombia: no se vuelve a restar el desfase.
 export function dayPartOf(hour: number): DayPart {
-  const local = localHour(hour)
+  const local = hourOfDay(hour)
   return local >= DAY_START && local < NIGHT_START ? "dia" : "noche"
 }
 

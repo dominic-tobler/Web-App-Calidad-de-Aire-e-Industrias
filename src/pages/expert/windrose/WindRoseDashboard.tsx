@@ -222,7 +222,7 @@ export function WindRoseDashboard() {
           <header className="chart-header">
             <h2>Rosas de contaminación</h2>
             <span className="chart-note">
-              % de horas del mes según la dirección desde donde llega el viento · hora local (UTC−5)
+              % de horas del mes según la dirección desde donde llega el viento · hora de Colombia (COT, UTC−5)
             </span>
           </header>
           <div className="roses-body">

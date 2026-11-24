@@ -8,7 +8,9 @@ export const BASE_MS = Date.UTC(2024, 0, 1)
 export const HOUR_MS = 3_600_000
 // Los valores inválidos (9999, saturación 985, fuera de rango) ya se quitan en
 // Preprocessing/Limpiar_datos.ipynb: aquí cada fila del CSV es una medición válida.
-const MIN_CORRELATION_PAIRS = 24
+// Mínimo de horas en común para publicar una celda de la matriz. Es menor que un día porque
+// cada matriz usa una sola semana y las horas con lluvia suelen ser pocas.
+const MIN_CORRELATION_PAIRS = 12
 
 export type MeasurementStore = {
   totalHours: number
@@ -35,6 +37,12 @@ export type CorrelationResult = {
   r: Array<Array<number | null>>
   n: number[][]
   hours: number
+}
+
+export type RainCorrelation = {
+  dry: CorrelationResult
+  wet: CorrelationResult
+  rainStations: number
 }
 
 let pending: Promise<MeasurementStore> | null = null
@@ -129,18 +137,40 @@ export function movingAverageSeries(
   })
 }
 
-// Correlación de Pearson entre variables con la serie horaria promedio de las estaciones.
-export function correlationMatrix(
+// Correlación de Pearson entre variables con la serie horaria promedio de las estaciones,
+// separando las horas sin lluvia de las horas con lluvia. Una hora es «con lluvia» si el
+// promedio de RAIN de las estaciones del recuadro con dato es > 0. Las horas sin dato de
+// RAIN (estaciones que no la miden o fallas del equipo) cuentan como sin lluvia, para no
+// perder las demás variables de esas horas.
+export function correlationByRain(
   store: MeasurementStore,
   stationIds: readonly string[],
   startHour: number,
   endHour: number,
   variables: VariableId[],
-): CorrelationResult {
+): RainCorrelation {
   const start = Math.max(0, startHour)
   const end = Math.min(endHour, store.totalHours - 1)
   const length = Math.max(0, end - start + 1)
   const columns = variables.map((variable) => averageAcrossStations(store, stationIds, variable, start, length))
+  const rain = averageAcrossStations(store, stationIds, "rain", start, length)
+  const rainStations = stationIds.filter((id) => store.series.has(seriesKey(id, "rain"))).length
+
+  return {
+    dry: matrixForHours(variables, columns, (offset) => !(rain[offset] > 0)),
+    wet: matrixForHours(variables, columns, (offset) => rain[offset] > 0),
+    rainStations,
+  }
+}
+
+function matrixForHours(
+  variables: VariableId[],
+  columns: Float64Array[],
+  keep: (offset: number) => boolean,
+): CorrelationResult {
+  const length = columns[0]?.length ?? 0
+  const mask = Array.from({ length }, (_, offset) => keep(offset))
+  const masked = columns.map((column) => column.map((value, offset) => (mask[offset] ? value : Number.NaN)))
 
   const r: Array<Array<number | null>> = []
   const n: number[][] = []
@@ -148,12 +178,12 @@ export function correlationMatrix(
     r.push([])
     n.push([])
     for (let column = 0; column < variables.length; column += 1) {
-      const [value, pairs] = pearson(columns[row], columns[column])
-      r[row].push(pairs >= MIN_CORRELATION_PAIRS ? value : null)
+      const [value, pairs] = pearson(masked[row], masked[column])
+      r[row].push(pairs >= MIN_CORRELATION_PAIRS && Number.isFinite(value) ? value : null)
       n[row].push(pairs)
     }
   }
-  return { variables, r, n, hours: length }
+  return { variables, r, n, hours: mask.filter(Boolean).length }
 }
 
 // Primera hora con algún dato entre dos horas; sirve para abrir cada periodo donde hay mediciones.

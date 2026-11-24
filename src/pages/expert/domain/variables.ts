@@ -41,9 +41,10 @@ export const POLLUTANT_VARIABLES = VARIABLES.filter((item) =>
   ["pm25", "pm10", "o3", "no2", "so2", "co"].includes(item.id),
 )
 
-// La matriz no usa la dirección del viento (variable circular).
+// La matriz no usa la dirección del viento (variable circular) ni la precipitación,
+// que en cambio separa las horas con y sin lluvia (8 variables).
 export const CORRELATION_VARIABLES: VariableId[] = VARIABLES.map((item) => item.id).filter(
-  (id) => id !== "wdd",
+  (id) => id !== "wdd" && id !== "rain",
 )
 
 export function hasLevels(id: VariableId): boolean {
