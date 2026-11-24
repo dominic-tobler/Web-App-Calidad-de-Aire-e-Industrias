@@ -25,3 +25,6 @@ dist-ssr
 
 # Build de la vista experta
 dist-expert
+
+# Environment Variables
+.env*
