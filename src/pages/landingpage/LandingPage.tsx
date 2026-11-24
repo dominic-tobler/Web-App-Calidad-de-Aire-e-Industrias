@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
-import standardPreview from './assets/preview-estandar.png'
-import expertPreview from './assets/preview-experto.png'
+import vistaEstandar from './assets/vista-estandar.svg'
+import vistaExperta from './assets/vista-experta.svg'
 import styles from './LandingPage.module.css'
 
 type ViewLinkProps = {
@@ -19,14 +19,14 @@ export type LandingPageProps = {
 const standardView = {
   title: 'Vista estándar',
   description: 'Elige un día, consulta una estación en el mapa y revisa la tendencia por hora.',
-  image: standardPreview,
+  image: vistaEstandar,
   imageAlt: 'Mapa de estaciones y fuentes de emisión con filtros de fecha',
 }
 
 const expertView = {
   title: 'Vista experta',
   description: 'Compara estaciones en un periodo y analiza correlaciones y fuentes industriales.',
-  image: expertPreview,
+  image: vistaExperta,
   imageAlt: 'Mapa, medias móviles, matriz de correlación y gráficos de industrias',
 }
 
