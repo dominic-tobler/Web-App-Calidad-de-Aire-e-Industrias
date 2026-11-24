@@ -28,13 +28,16 @@ export function PollutantTip({ pollutant }: { pollutant: Pollutant }) {
 export function LevelTip() {
   return (
     <HoverTip label="¿Qué significa?" contentKey="nivel">
-      <strong>Niveles de contaminación</strong>
+      <strong>Índice de calidad del aire</strong>
       <ul className="level-tip-list">
         {AIR_QUALITY_LEVELS.map((level) => (
           <li key={level.id}>
             <i style={{ background: level.color }} />
             <span>
-              <b>{level.label}.</b> {levelMeaning(level.id)}
+              <b>
+                {level.label} (ICA {level.ica}).
+              </b>{" "}
+              {levelMeaning(level.id)}
             </span>
           </li>
         ))}

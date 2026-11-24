@@ -28,7 +28,6 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 - **Fondo = bandas ICA** con los puntos de corte de la Tabla No. 2 (`ICA_CUTS` en `domain/icaLevels.ts`). Los gases (O₃, CO, SO₂, NO₂) vienen en ppm en la tabla y se pasan a µg/m³ a 25 °C y 1 atm. El eje muestra los datos y al menos la banda Buena completa. NO₂ solo tiene cortes desde «Muy dañina» (nota 2 de la tabla), así que con valores bajos no se dibujan bandas y aparece una nota. En O₃, «Peligrosa» usa el corte de 1 h (nota 3).
 - El selector **Variable** solo trae contaminantes (PM2.5, PM10, O₃, NO₂, SO₂, CO) y cambia la serie y el color del mapa.
 - **Clic en la serie:** fija la hora del mapa (línea azul «Mapa · dd/mm hh:00»). El botón «Volver al mediodía del primer día» la restablece, y cambiar las fechas también.
-- **Bandas Bajo → Peligroso:** solo existen para PM2.5, PM10, NO₂ y SO₂ (cortes en `THRESHOLDS` de `domain/airQuality.ts`).
 - Al pasar el cursor se ven los valores de cada estación en esa hora.
 
 ## Matrices de correlación (`charts/CorrelationMatrix.tsx`)
@@ -61,7 +60,6 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 
 ## Pendientes conocidos
 
-- La vista común todavía usa su escala anterior de 5 niveles (`src/domain/airQuality.ts`), no la del ICA.
 - Si se suelta el mouse fuera del mapa, el recuadro no se confirma.
 
 ## Rosas de viento (`src/pages/expert/windrose/`)

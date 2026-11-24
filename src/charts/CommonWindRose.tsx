@@ -2,7 +2,7 @@ import { WIND_SECTOR_DEG, WIND_SECTORS } from "../domain/wind"
 
 type CommonWindRoseProps = {
   counts: number[]
-  dominant: number | null
+  regions: readonly number[]
   label: string
 }
 
@@ -12,7 +12,7 @@ const INNER = 16
 const OUTER = 58
 
 // Rosa de un solo color: el largo de cada punta es cuántas horas llegó el viento desde ese lado.
-export function CommonWindRose({ counts, dominant, label }: CommonWindRoseProps) {
+export function CommonWindRose({ counts, regions, label }: CommonWindRoseProps) {
   const max = Math.max(0, ...counts)
 
   return (
@@ -29,12 +29,12 @@ export function CommonWindRose({ counts, dominant, label }: CommonWindRoseProps)
       {counts.map((count, sector) => {
         if (count === 0 || max === 0) return null
         const radius = INNER + (OUTER - INNER) * (count / max)
-        const dominantPetal = sector === dominant
+        const rank = regions.indexOf(sector)
         return (
           <path
             key={WIND_SECTORS[sector].short}
             d={petal(sector, radius)}
-            fill={dominantPetal ? "#1a4dd9" : "#8aa0dc"}
+            fill={rank === 0 ? "#1a4dd9" : rank > 0 ? "#6d8ae0" : "#c5d0ef"}
             stroke="#ffffff"
             strokeWidth="1"
           >
@@ -73,8 +73,8 @@ const CARDINALS = [
 ] as const
 
 function petal(sector: number, radius: number): string {
-  const start = sector * WIND_SECTOR_DEG - WIND_SECTOR_DEG / 2 + 2.2
-  const end = sector * WIND_SECTOR_DEG + WIND_SECTOR_DEG / 2 - 2.2
+  const start = sector * WIND_SECTOR_DEG - WIND_SECTOR_DEG / 2 + 1.1
+  const end = sector * WIND_SECTOR_DEG + WIND_SECTOR_DEG / 2 - 1.1
   const [x0, y0] = point(INNER, start)
   const [x1, y1] = point(radius, start)
   const [x2, y2] = point(radius, end)

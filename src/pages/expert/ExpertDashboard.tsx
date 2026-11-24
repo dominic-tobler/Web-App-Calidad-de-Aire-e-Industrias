@@ -40,7 +40,7 @@ import {
   variableLevel,
   type VariableId,
 } from "./domain/variables"
-import { exposureHours } from "./domain/icaLevels"
+import { exposureHours, ICA_UNCLASSIFIED } from "./domain/icaLevels"
 import { ExpertMap } from "./map/ExpertMap"
 import "../standard/dashboard.css"
 import "./expert.css"
@@ -161,7 +161,7 @@ export function ExpertDashboard() {
   const stationFill = useMemo(() => {
     const fill: Record<string, string> = {}
     for (const [id, value] of Object.entries(readings)) {
-      fill[id] = variableLevel(variable, value)?.color ?? "#c9d3ce"
+      fill[id] = variableLevel(variable, value)?.color ?? ICA_UNCLASSIFIED
     }
     return fill
   }, [readings, variable])

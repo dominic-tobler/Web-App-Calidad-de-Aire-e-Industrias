@@ -6,7 +6,7 @@ import { formatReading } from "../../../domain/airQuality"
 import { placeWithDepartment, statusLabel } from "../../../domain/industry"
 import { stationPlace, type Station } from "../../../domain/station"
 import { loadMeasurements, type MeasurementStore } from "../data/measurements"
-import { ICA_LEVELS, icaLevel } from "../domain/icaLevels"
+import { ICA_LEVELS, ICA_UNCLASSIFIED, icaLevel } from "../domain/icaLevels"
 import { WindRoseChart } from "./WindRoseChart"
 import { WindRoseMap } from "./WindRoseMap"
 import {
@@ -136,7 +136,7 @@ export function WindRoseDashboard() {
   }, [fanPollutant, month, store, windStations])
   const stationFill = useMemo(() => {
     const fill: Record<string, string> = {}
-    for (const [id, value] of Object.entries(means)) fill[id] = icaLevel(fanPollutant, value)?.color ?? "#c9d3ce"
+    for (const [id, value] of Object.entries(means)) fill[id] = icaLevel(fanPollutant, value)?.color ?? ICA_UNCLASSIFIED
     return fill
   }, [fanPollutant, means])
 

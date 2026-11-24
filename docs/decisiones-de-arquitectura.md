@@ -71,7 +71,7 @@ Así las coordenadas de `industries.json` y de las estaciones caen en el lugar c
 
 ## 6. Una sola escala de calidad del aire
 
-Las bandas *Bajo*, *Moderado*, *Alto*, *Muy alto* y *Peligroso* se definen una vez, con umbral por contaminante. El mapa, el calendario y las series consumen ese módulo. Ningún gráfico hardcodea colores ni cortes.
+Las dos vistas usan el Índice de calidad del aire (ICA), Tabla No. 2 del DANE, definido una sola vez en `src/domain/icaLevels.ts`. El mapa, el calendario y las series consumen ese módulo. Ningún gráfico hardcodea colores ni cortes.
 
 Los textos del diseño se normalizan en la interfaz: «Index de calidad del aire» pasa a «Índice de calidad del aire» y «PM2» a «PM2.5».
 

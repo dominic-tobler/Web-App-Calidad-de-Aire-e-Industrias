@@ -166,7 +166,7 @@ select:focus-visible {
 .pollutant-tip-bubble {
   position: fixed;
   z-index: 4000;
-  width: min(280px, calc(100vw - 16px));
+  width: min(320px, calc(100vw - 16px));
   padding: 12px 14px;
   background: #1a2420;
   color: #f4f7f5;
@@ -753,6 +753,21 @@ select:focus-visible {
   font-weight: 600;
 }
 
+.leaflet-tooltip.fan-label {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: #1a4dd9;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.leaflet-tooltip.fan-label::before {
+  display: none;
+}
+
 .wind-rose {
   display: grid;
   grid-template-columns: 148px minmax(0, 1fr);
@@ -1229,9 +1244,9 @@ select:focus-visible {
 }
 
 .map-legend .level-scale {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .map-legend .level-scale li {
@@ -1243,6 +1258,7 @@ select:focus-visible {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(26, 36, 32, 0.22);
 }
 
 .dashboard.is-map-stage .control-panel .map-legend .legend-block {

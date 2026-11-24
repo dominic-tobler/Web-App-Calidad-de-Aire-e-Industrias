@@ -15,7 +15,7 @@ type CalendarGridProps = {
   nextMonthDisabled?: boolean
 }
 
-const DARK_INK_LEVELS = new Set(["moderado", "alto", "muy-alto"])
+const DARK_INK_LEVELS = new Set(["buena", "moderada", "sensibles"])
 
 export function CalendarGrid({
   year,

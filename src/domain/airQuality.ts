@@ -1,3 +1,5 @@
+import { ICA_LEVELS, icaCuts, icaLevel, type IcaLevel } from "./icaLevels"
+
 // Contaminantes presentes en la columna `variable` de datos_24_25.csv.
 // `plain`, `short`, `about` y `effect` explican el nombre a quien no trabaja con calidad del aire.
 export const POLLUTANTS = [
@@ -67,42 +69,18 @@ export const POLLUTANTS = [
 
 export type Pollutant = (typeof POLLUTANTS)[number]["id"]
 
-export const AIR_QUALITY_STOPS = [
-  "#1a9850",
-  "#a6d96a",
-  "#fee08b",
-  "#fdae61",
-  "#d73027",
-] as const
+// Misma escala que la vista experta: ICA, Tabla No. 2 del DANE (ver icaLevels.ts).
+export const AIR_QUALITY_LEVELS = ICA_LEVELS
 
-export const AIR_QUALITY_LEVELS = [
-  { id: "bajo", label: "Bajo", color: AIR_QUALITY_STOPS[0] },
-  { id: "moderado", label: "Moderado", color: AIR_QUALITY_STOPS[1] },
-  { id: "alto", label: "Alto", color: AIR_QUALITY_STOPS[2] },
-  { id: "muy-alto", label: "Muy alto", color: AIR_QUALITY_STOPS[3] },
-  { id: "peligroso", label: "Peligroso", color: AIR_QUALITY_STOPS[4] },
-] as const
-
-export type AirQualityLevel = (typeof AIR_QUALITY_LEVELS)[number]
-
-// Cortes de referencia en µg/m³ para las cinco bandas del diseño.
-// CO y O₃ separan la cola de la muestra sin tratar el valor típico como peligroso:
-// el grueso de CO queda por debajo de 1 000 y el de O₃ por debajo de 50.
-export const THRESHOLDS: Record<Pollutant, readonly number[]> = {
-  pm25: [12, 35, 55, 150],
-  pm10: [54, 154, 254, 354],
-  no2: [40, 100, 200, 400],
-  so2: [20, 50, 100, 200],
-  co: [1000, 2000, 5000, 10000],
-  o3: [50, 100, 180, 240],
-}
+export type AirQualityLevel = IcaLevel
 
 const LEVEL_MEANINGS: Record<AirQualityLevel["id"], string> = {
-  bajo: "El aire está en un rango favorable para la mayoría de las personas.",
-  moderado: "Es aceptable. Quienes son más sensibles pueden notar una molestia leve.",
-  alto: "Conviene reducir el esfuerzo al aire libre si tienes asma u otra afección respiratoria.",
-  "muy-alto": "Puede afectar a más personas. Mejor acortar el tiempo al aire libre.",
-  peligroso: "Evita actividades prolongadas al aire libre.",
+  buena: "El aire supone poco o ningún riesgo para la mayoría de las personas.",
+  moderada: "Es aceptable. Algunas personas más sensibles pueden notar una molestia leve.",
+  sensibles: "Niños, mayores y personas con asma u otra afección pueden verse afectados.",
+  danina: "Puede afectar a más personas. Conviene acortar el tiempo al aire libre.",
+  "muy-danina": "Alerta: puede afectar a toda la población. Mejor permanecer en interiores.",
+  peligrosa: "Emergencia sanitaria. Evita actividades al aire libre.",
 }
 
 export function pollutantLabel(id: Pollutant): string {
@@ -118,9 +96,15 @@ export function levelMeaning(id: AirQualityLevel["id"]): string {
 }
 
 export function airQualityLevel(pollutant: Pollutant, value: number): AirQualityLevel | null {
-  const cuts = THRESHOLDS[pollutant]
-  const index = cuts.findIndex((cut) => value < cut)
-  return AIR_QUALITY_LEVELS[index === -1 ? AIR_QUALITY_LEVELS.length - 1 : index]
+  return icaLevel(pollutant, value)
+}
+
+// Texto para un valor medido que la tabla del ICA no clasifica.
+export function unclassifiedNote(pollutant: Pollutant): string | null {
+  const cuts = icaCuts(pollutant)
+  if (!cuts || cuts.lowers[0] != null) return null
+  if (pollutant === "no2") return "El ICA solo clasifica el NO₂ desde Muy dañina."
+  return "Este valor no entra en las categorías del ICA."
 }
 
 export function formatReading(value: number): string {

@@ -8,24 +8,42 @@ export const SEARCH_RADIUS_KM = 15
 // Por debajo de esta velocidad la dirección no es confiable.
 const CALM_MS = 0.5
 
+// Misma rosa de 16 rumbos que la vista experta, para poder separar lados vecinos
+// como oeste, oeste-suroeste y suroeste.
 export const WIND_SECTORS = [
-  { short: "N", name: "norte", from: "del norte" },
-  { short: "NE", name: "noreste", from: "del noreste" },
-  { short: "E", name: "este", from: "del este" },
-  { short: "SE", name: "sureste", from: "del sureste" },
-  { short: "S", name: "sur", from: "del sur" },
-  { short: "SO", name: "suroeste", from: "del suroeste" },
-  { short: "O", name: "oeste", from: "del oeste" },
-  { short: "NO", name: "noroeste", from: "del noroeste" },
+  { short: "N", name: "norte" },
+  { short: "NNE", name: "nornoreste" },
+  { short: "NE", name: "noreste" },
+  { short: "ENE", name: "estenoreste" },
+  { short: "E", name: "este" },
+  { short: "ESE", name: "estesureste" },
+  { short: "SE", name: "sureste" },
+  { short: "SSE", name: "sursureste" },
+  { short: "S", name: "sur" },
+  { short: "SSO", name: "sursuroeste" },
+  { short: "SO", name: "suroeste" },
+  { short: "OSO", name: "oestesuroeste" },
+  { short: "O", name: "oeste" },
+  { short: "ONO", name: "oestenoroeste" },
+  { short: "NO", name: "noroeste" },
+  { short: "NNO", name: "nornoroeste" },
 ] as const
 
 export const WIND_SECTOR_DEG = 360 / WIND_SECTORS.length
+// Las regiones que concentran el viento, igual que el abanico de la vista experta.
+export const MAIN_REGION_COUNT = 3
+
+export type WindRegion = {
+  sector: number
+  hours: number
+  share: number
+}
 
 export type DailyWind = {
   counts: number[]
   directed: number
   calm: number
-  dominant: number | null
+  regions: WindRegion[]
 }
 
 export function dailyWind(hours: WindHour[]): DailyWind {
@@ -39,21 +57,18 @@ export function dailyWind(hours: WindHour[]): DailyWind {
     counts[sectorOf(sample.direction)] += 1
   }
   const directed = counts.reduce((sum, count) => sum + count, 0)
-  let dominant: number | null = null
-  let best = 0
-  counts.forEach((count, index) => {
-    if (count > best) {
-      best = count
-      dominant = index
-    }
-  })
-  return { counts, directed, calm, dominant }
+  const regions = counts
+    .map((hours, sector) => ({ sector, hours, share: directed ? hours / directed : 0 }))
+    .filter((item) => item.hours > 0)
+    .sort((left, right) => right.hours - left.hours)
+    .slice(0, MAIN_REGION_COUNT)
+  return { counts, directed, calm, regions }
 }
 
 export function industriesInWindRadius(
   station: Station,
   candidates: Industry[],
-  dominantSector: number | null,
+  regions: readonly WindRegion[],
 ): StationLink[] {
   return candidates
     .map((industry) => ({
@@ -72,7 +87,7 @@ export function industriesInWindRadius(
       ),
     }))
     .filter((item) => item.distanceKm <= SEARCH_RADIUS_KM)
-    .filter((item) => dominantSector == null || inSector(item.bearing, dominantSector))
+    .filter((item) => regions.length === 0 || regions.some((region) => inSector(item.bearing, region.sector)))
     .sort((left, right) => left.distanceKm - right.distanceKm)
     .map(({ industry, distanceKm }) => ({ industry, distanceKm }))
 }

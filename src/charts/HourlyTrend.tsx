@@ -5,21 +5,14 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react"
 import * as d3 from "d3"
-import {
-  AIR_QUALITY_LEVELS,
-  THRESHOLDS,
-  airQualityLevel,
-  type Pollutant,
-} from "../domain/airQuality"
+import { airQualityLevel, unclassifiedNote, type Pollutant } from "../domain/airQuality"
+import { ICA_UNCLASSIFIED, icaBands, icaCuts } from "../domain/icaLevels"
 import { formatHour } from "../domain/time"
 
 type HourPoint = {
   hour: number
   value: number | null
 }
-
-// Mismos fondos suaves que la serie del usuario experto, en el orden de AIR_QUALITY_LEVELS.
-const BAND_FILLS = ["#d1ebd1", "#fffab8", "#fad4bd", "#f7b8b8", "#dbc2e5"]
 
 type HourlyTrendProps = {
   hour: number
@@ -59,9 +52,9 @@ export function HourlyTrend({
       const height = wrap.clientHeight
       if (width < 40 || height < 40) return
 
-      const cuts = THRESHOLDS[pollutant]
-      const showLabels = cuts != null && width >= 320
-      const margin = { top: 8, right: showLabels ? 68 : 12, bottom: 26, left: 72 }
+      const bands = icaBands(pollutant)
+      const showLabels = bands.length > 0 && width >= 320
+      const margin = { top: 8, right: showLabels ? 84 : 12, bottom: 26, left: 72 }
       const innerWidth = width - margin.left - margin.right
       const innerHeight = height - margin.top - margin.bottom
       if (innerWidth < 20 || innerHeight < 20) return
@@ -74,42 +67,56 @@ export function HourlyTrend({
       const points: HourPoint[] = series.map((value, index) => ({ hour: index, value }))
       const present = points.flatMap((point) => (point.value == null ? [] : [point.value]))
       const dataMax = present.length === 0 ? 1 : Math.max(...present, 1)
-      // Igual que en la serie del experto: al menos la banda Moderado, para leer el nivel.
-      const yMax = cuts ? Math.max(dataMax, cuts[1]) : dataMax
+      // Igual que en la serie del experto: si la primera banda arranca en 0, el eje la muestra completa.
+      const startsAtZero = bands[0]?.low === 0
+      const contextTop = startsAtZero ? bands[0].high * 1.08 : 0
+      const yMax = Math.max(dataMax * 1.05, contextTop, 1)
 
       const xScale = d3.scaleLinear().domain([0, 23]).range([0, innerWidth])
       const yScale = d3.scaleLinear().domain([0, yMax]).nice().range([innerHeight, 0])
+      const yTop = yScale.domain()[1]
 
-      if (cuts) {
-        const yTop = yScale.domain()[1]
-        const edges = [0, ...cuts, Number.POSITIVE_INFINITY]
-        AIR_QUALITY_LEVELS.forEach((level, index) => {
-          const low = edges[index]
-          const high = Math.min(edges[index + 1], yTop)
-          if (low >= yTop) return
-          const bandTop = yScale(high)
-          const bandHeight = Math.max(0, yScale(low) - bandTop)
+      for (const band of bands) {
+        if (band.low >= yTop) continue
+        const high = Math.min(band.high, yTop)
+        const bandTop = yScale(high)
+        const bandHeight = Math.max(0, yScale(band.low) - bandTop)
+        plot
+          .append("rect")
+          .attr("x", 0)
+          .attr("width", innerWidth)
+          .attr("y", bandTop)
+          .attr("height", bandHeight)
+          .attr("fill", band.level.band)
+          .attr("pointer-events", "none")
+          .append("title")
+          .text(`${band.level.label} (ICA ${band.level.ica})`)
+        if (showLabels && bandHeight >= 14) {
           plot
-            .append("rect")
-            .attr("x", 0)
-            .attr("width", innerWidth)
-            .attr("y", bandTop)
-            .attr("height", bandHeight)
-            .attr("fill", BAND_FILLS[index])
+            .append("text")
+            .attr("x", innerWidth + 6)
+            .attr("y", bandTop + bandHeight / 2)
+            .attr("dy", "0.35em")
+            .attr("fill", "#666")
+            .attr("font-size", 10)
+            .attr("font-family", FONT)
             .attr("pointer-events", "none")
-          if (showLabels && bandHeight >= 14) {
-            plot
-              .append("text")
-              .attr("x", innerWidth + 6)
-              .attr("y", bandTop + bandHeight / 2)
-              .attr("dy", "0.35em")
-              .attr("fill", "#666")
-              .attr("font-size", 10)
-              .attr("font-family", FONT)
-              .attr("pointer-events", "none")
-              .text(level.label)
-          }
-        })
+            .text(band.level.short)
+        }
+      }
+
+      const note = unclassifiedNote(pollutant) ?? icaCuts(pollutant)?.note
+      const firstLow = bands[0]?.low ?? 0
+      if (note && firstLow > 0 && firstLow >= yTop) {
+        plot
+          .append("text")
+          .attr("x", innerWidth - 4)
+          .attr("y", 12)
+          .attr("text-anchor", "end")
+          .attr("fill", "#595959")
+          .attr("font-size", 11)
+          .attr("font-family", FONT)
+          .text(note)
       }
 
       plot
@@ -182,7 +189,7 @@ export function HourlyTrend({
         .attr("cx", (point) => xScale(point.hour))
         .attr("cy", (point) => yScale(point.value ?? 0))
         .attr("r", (point) => (point.hour === hour ? 5 : 3.5))
-        .attr("fill", (point) => airQualityLevel(pollutant, point.value ?? 0)?.color ?? "#1a3c32")
+        .attr("fill", (point) => airQualityLevel(pollutant, point.value ?? 0)?.color ?? ICA_UNCLASSIFIED)
         .attr("stroke", "#1a3c32")
         .attr("stroke-width", (point) => (point.hour === hour ? 2 : 1))
 

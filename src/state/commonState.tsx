@@ -46,18 +46,21 @@ type CommonContextValue = {
 
 const CommonContext = createContext<CommonContextValue | null>(null)
 
+// 26 de enero de 2024, 20:00, estación 3 y PM2.5: el viento llega del sur,
+// la estación está en nivel muy alto y hay industrias de ese lado.
+// Así el mapa, la rosa y la serie se leen sin elegir nada.
 const initialState: CommonState = {
   year: 2024,
   month: 0,
-  day: 22,
-  hour: 19,
+  day: 26,
+  hour: 20,
   pollutant: "pm25",
   source: "todos",
   view: "exploracion",
   analysisMode: "dispersion",
   mapExpanded: false,
   playing: false,
-  selectedStationId: null,
+  selectedStationId: "3",
 }
 
 export function CommonStateProvider({ children }: { children: ReactNode }) {
