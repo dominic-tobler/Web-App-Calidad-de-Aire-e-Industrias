@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { CommonWindRose } from "../../charts/CommonWindRose"
 import { HourlyTrend } from "../../charts/HourlyTrend"
 import { EMISSION_SOURCE_ALL, industries } from "../../data/industries"
 import {
@@ -9,8 +10,9 @@ import {
   loadObservations,
   readingAt,
   readingsAtHour,
+  windOnDay,
 } from "../../data/observations"
-import { nearestIndustries, stations } from "../../data/stations"
+import { stations } from "../../data/stations"
 import {
   airQualityLevel,
   formatReading,
@@ -19,18 +21,26 @@ import {
   type Pollutant,
 } from "../../domain/airQuality"
 import { formatDistance } from "../../domain/geo"
+import {
+  dailyWind,
+  industriesInWindRadius,
+  SEARCH_RADIUS_KM,
+  WIND_SECTOR_DEG,
+  WIND_SECTORS,
+} from "../../domain/wind"
 import { emissionSourceKey, emissionSourceLabel, placeWithDepartment, statusLabel } from "../../domain/industry"
 import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
 import { COLOMBIA_TIME_LABEL, formatHour, formatInstant, type Year } from "../../domain/time"
 import { CundinamarcaMap, MapLegend } from "../../layouts/map/CundinamarcaMap"
-import { LevelTip } from "../../layouts/PollutantTip"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
 import { EmissionFilters } from "../../layouts/EmissionFilters"
 import "./dashboard.css"
 
+const NEARBY_LIST_LIMIT = 6
+
 export function CommonDashboard() {
-  const { state, setDate, setHour, setPollutant, setSelectedStation, setSource } = useCommonState()
+  const { state, setDate, setHour, setPlaying, setPollutant, setSelectedStation, setSource } = useCommonState()
   const [calendar, setCalendar] = useState(() => ({ year: state.year, month: state.month }))
   const [observationsState, setObservationsState] = useState<"loading" | "ready" | "error">("loading")
   const [observationsError, setObservationsError] = useState<string | null>(null)
@@ -69,10 +79,22 @@ export function CommonDashboard() {
   )
 
   const selectedStation = stations.find((station) => station.id === state.selectedStationId) ?? null
-  const nearest = useMemo(
-    () => (selectedStation ? nearestIndustries(selectedStation, visibleIndustries) : []),
-    [selectedStation, visibleIndustries],
+  const windHours = useMemo(
+    () =>
+      selectedStation
+        ? windOnDay(selectedStation.id, state.year, state.month, state.day)
+        : [],
+    [observationsState, selectedStation, state.day, state.month, state.year],
   )
+  const wind = useMemo(() => dailyWind(windHours), [windHours])
+  const nearby = useMemo(
+    () =>
+      selectedStation
+        ? industriesInWindRadius(selectedStation, visibleIndustries, wind.dominant)
+        : [],
+    [selectedStation, visibleIndustries, wind.dominant],
+  )
+  const windCaption = windCaptionFor(observationsState, windHours.length, wind.calm, wind.dominant)
   const hourReadings = useMemo(
     () => readingsAtHour(state.pollutant, state.year, state.month, state.day, state.hour),
     [observationsState, state.pollutant, state.year, state.month, state.day, state.hour],
@@ -125,7 +147,10 @@ export function CommonDashboard() {
           industries={visibleIndustries}
           stations={stations}
           selectedStationId={state.selectedStationId}
-          links={nearest}
+          links={nearby}
+          searchRadiusKm={selectedStation ? SEARCH_RADIUS_KM : null}
+          windBearing={wind.dominant == null ? null : wind.dominant * WIND_SECTOR_DEG}
+          windSpanDeg={wind.dominant == null ? null : WIND_SECTOR_DEG}
           hourLabel={`${formatHour(state.hour)} ${COLOMBIA_TIME_LABEL}`}
           pollutant={state.pollutant}
           readings={hourReadings}
@@ -162,17 +187,16 @@ export function CommonDashboard() {
               previousMonthDisabled={calendar.year === 2024 && calendar.month === 0}
               nextMonthDisabled={calendar.year === 2025 && calendar.month === 11}
             />
-            <div className="day-scale">
-              <p className="scale-caption">
-                <span>{dayLevel ? `Nivel del día · ${dayLevel.label}` : "Sin mediciones este día"}</span>
-                <LevelTip />
-              </p>
-              <div className="scale-row">
-                <span>Bajo</span>
-                <div className="scale-bar" />
-                <span>Alto</span>
-              </div>
-            </div>
+            <p className="day-level-status">
+              {dayLevel ? (
+                <>
+                  <i style={{ background: dayLevel.color }} aria-hidden="true" />
+                  <span>Promedio de este día: {dayLevel.label}</span>
+                </>
+              ) : (
+                <span>Sin mediciones este día</span>
+              )}
+            </p>
           </section>
           <MapLegend />
         </aside>
@@ -184,7 +208,7 @@ export function CommonDashboard() {
             <p>
               {selectedStation
                 ? `${stationPlace(selectedStation)} · ${stationStatusLabel(selectedStation)}`
-                : "Las líneas van a las industrias más cercanas"}
+                : "El círculo marca las industrias dentro del radio"}
             </p>
           </header>
           <div className="station-body">
@@ -199,43 +223,63 @@ export function CommonDashboard() {
                   Latitud {formatCoordinate(selectedStation.latitude)} · Longitud{" "}
                   {formatCoordinate(selectedStation.longitude)}
                 </p>
-                <h3 className="nearest-title">Industrias más cercanas</h3>
-                {nearest.length === 0 ? (
-                  <p>Ninguna industria visible con el filtro actual.</p>
+                <div className="wind-rose">
+                  <CommonWindRose counts={wind.counts} dominant={wind.dominant} label={windCaption} />
+                  <div>
+                    <h3 className="nearest-title">De dónde vino el viento</h3>
+                    <p>{windCaption}</p>
+                  </div>
+                </div>
+                <h3 className="nearest-title">
+                  {wind.dominant == null ? "Industrias dentro del radio" : "Industrias de ese lado"}
+                  {nearby.length > 0 ? <span className="nearest-count">{nearby.length}</span> : null}
+                </h3>
+                <p className="wind-note">{nearbyNote(wind.dominant)}</p>
+                {nearby.length === 0 ? (
+                  <p>Ninguna industria visible en ese radio con el filtro actual.</p>
                 ) : (
-                  <ol className="nearest-list">
-                    {nearest.map(({ industry, distanceKm }) => (
-                      <li key={industry.id}>
-                        <span>
-                          <strong>{placeWithDepartment(industry.municipality, industry.department)}</strong>
-                          <span className="nearest-meta">
-                            {emissionSourceLabel(industry.sourceRaw)} · {statusLabel(industry.status)}
+                  <>
+                    <ol className="nearest-list">
+                      {nearby.slice(0, NEARBY_LIST_LIMIT).map(({ industry, distanceKm }) => (
+                        <li key={industry.id}>
+                          <span>
+                            <strong>{placeWithDepartment(industry.municipality, industry.department)}</strong>
+                            <span className="nearest-meta">
+                              {emissionSourceLabel(industry.sourceRaw)} · {statusLabel(industry.status)}
+                            </span>
                           </span>
-                        </span>
-                        <span className="nearest-distance">{formatDistance(distanceKm)}</span>
-                      </li>
-                    ))}
-                  </ol>
+                          <span className="nearest-distance">{formatDistance(distanceKm)}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    {nearby.length > NEARBY_LIST_LIMIT && (
+                      <p className="wind-note">
+                        y {nearby.length - NEARBY_LIST_LIMIT} más, unidas con una línea en el mapa
+                      </p>
+                    )}
+                  </>
                 )}
               </>
             ) : (
               <>
                 <p>{coverageMessage(state.pollutant, measuredStations, state.hour)}</p>
-                <p>Elige una estación para ver el valor y la distancia a las tres industrias más cercanas.</p>
+                <p>
+                  Elige una estación para ver de dónde vino el viento y las industrias dentro de{" "}
+                  {SEARCH_RADIUS_KM} km.
+                </p>
               </>
             )}
           </div>
         </aside>
 
         <HourlyTrend
-          year={state.year}
-          month={state.month}
-          day={state.day}
           hour={state.hour}
           pollutant={state.pollutant}
           series={series}
           seriesLabel={selectedStation ? stationTitle(selectedStation) : "Promedio de estaciones"}
+          playing={state.playing}
           onHour={setHour}
+          onPlaying={setPlaying}
         />
         </div>
       </div>
@@ -254,6 +298,28 @@ function monthDayLevels(
     if (level) levels[Number(day)] = level
   }
   return levels
+}
+
+function windCaptionFor(
+  observationsState: "loading" | "ready" | "error",
+  hours: number,
+  calm: number,
+  dominant: number | null,
+): string {
+  if (observationsState === "loading") return "Cargando el viento de este día…"
+  if (observationsState === "error") return "No se pudo leer la dirección del viento."
+  if (hours === 0) return "Esta estación no midió el viento este día."
+  if (dominant == null) return "Este día casi no hubo viento, así que no hay un lado claro."
+  const sentence = `Este día llegó sobre todo ${WIND_SECTORS[dominant].from}. La punta más larga es ese lado.`
+  if (calm > 0 && calm >= hours - calm) return `${sentence} Varias horas casi no hubo viento.`
+  return sentence
+}
+
+function nearbyNote(dominant: number | null): string {
+  if (dominant == null) {
+    return `Sin una dirección de viento, se muestran las industrias a menos de ${SEARCH_RADIUS_KM} km.`
+  }
+  return `A menos de ${SEARCH_RADIUS_KM} km, del lado de donde vino el viento.`
 }
 
 function coverageMessage(pollutant: Pollutant, measured: number, hour: number): string {

@@ -93,7 +93,6 @@ select:focus-visible {
 
 .select-menu,
 .calendar,
-.day-scale,
 .station-panel,
 .trend-card,
 .map-frame {
@@ -119,7 +118,6 @@ select:focus-visible {
 }
 
 .field-label > span,
-.day-scale p,
 .contamination-scale p {
   font-size: 13px;
   font-weight: 500;
@@ -394,20 +392,25 @@ select:focus-visible {
   visibility: hidden;
 }
 
-.day-scale {
+.day-level-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   padding: 10px 12px 12px;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-.day-scale p,
+.day-level-status i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
 .contamination-scale p {
   margin: 0 0 6px;
-}
-
-.scale-caption {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 .scale-row {
@@ -750,11 +753,53 @@ select:focus-visible {
   font-weight: 600;
 }
 
+.wind-rose {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.wind-rose-chart {
+  width: 148px;
+  height: 148px;
+}
+
+.wind-rose .nearest-title,
+.wind-rose p {
+  margin-top: 0;
+}
+
+.station-body .wind-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 .nearest-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 14px 0 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--accent);
+}
+
+.nearest-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .nearest-list {
@@ -812,28 +857,102 @@ select:focus-visible {
 
 .trend-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 10px 14px 8px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 8px;
   border-bottom: 1px solid var(--line);
 }
 
-.trend-header h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+.trend-readout {
+  min-width: 0;
 }
 
-.trend-header p {
+.trend-header .trend-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   margin: 0;
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.trend-header .trend-value strong {
+  font-weight: 600;
+}
+
+.trend-header .trend-value span {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.trend-header .trend-value.is-empty {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--muted);
+}
+
+.trend-header .trend-caption {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-play {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trend-play svg {
+  display: block;
+}
+
+.trend-play:hover {
+  background: var(--accent-soft);
+}
+
+.trend-play[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
 }
 
 .trend-plot {
+  position: relative;
   flex: 1;
   min-height: 0;
   background: #fcfdfc;
+}
+
+.trend-scrub {
+  position: absolute;
+  inset: 0;
+  cursor: ew-resize;
+  touch-action: none;
 }
 
 .trend-plot svg {
@@ -892,7 +1011,7 @@ select:focus-visible {
   --stage-gap: 12px;
   --rail-width: 300px;
   --detail-width: 400px;
-  --trend-height: 280px;
+  --trend-height: 308px;
   --map-pad-left: 344px;
   --map-pad-right: 444px;
   --map-pad-top: 48px;
@@ -972,8 +1091,7 @@ select:focus-visible {
 }
 
 .dashboard.is-map-stage .control-panel .select-menu,
-.dashboard.is-map-stage .control-panel .calendar,
-.dashboard.is-map-stage .control-panel .day-scale {
+.dashboard.is-map-stage .control-panel .calendar {
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -981,8 +1099,12 @@ select:focus-visible {
 }
 
 .dashboard.is-map-stage .control-panel .select-menu + .select-menu,
-.dashboard.is-map-stage .control-panel .day-scale {
+.dashboard.is-map-stage .control-panel .day-level-status {
   border-top: 1px solid var(--line);
+}
+
+.dashboard.is-map-stage .control-panel .day-level-status {
+  padding: 10px 16px 12px;
 }
 
 .dashboard.is-map-stage .control-panel .menu-list {
@@ -1048,8 +1170,8 @@ select:focus-visible {
 .dashboard.is-map-stage .control-panel .map-legend {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px 14px;
+  gap: 0;
+  padding: 0 16px 14px;
   background: transparent;
   border: 0;
   border-top: 1px solid var(--line);
@@ -1057,36 +1179,74 @@ select:focus-visible {
   box-shadow: none;
 }
 
-.dashboard.is-map-stage .control-panel .map-legend .symbol-legend,
-.dashboard.is-map-stage .control-panel .map-legend .contamination-scale {
-  width: auto;
-  max-width: none;
+.map-legend .legend-block + .legend-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.map-legend .legend-block h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.map-legend .legend-block p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.map-legend .legend-block p .pollutant-tip {
+  display: inline;
+}
+
+.map-legend .legend-items,
+.map-legend .level-scale {
+  list-style: none;
+  margin: 8px 0 0;
   padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
 }
 
-.dashboard.is-map-stage .control-panel .map-legend .territory-legend,
-.dashboard.is-map-stage .control-panel .map-legend .symbol-row {
+.map-legend .legend-items {
+  display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  max-width: none;
+  gap: 6px;
 }
 
-.dashboard.is-map-stage .control-panel .map-legend .symbol-caption {
-  max-width: none;
+.map-legend .legend-items li,
+.map-legend .level-scale li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
-.dashboard.is-map-stage .control-panel .map-legend .contamination-scale {
-  padding-top: 8px;
-  border-top: 1px solid var(--line);
-  text-align: left;
+.map-legend .level-scale {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
 }
 
-.dashboard.is-map-stage .control-panel .map-legend .contamination-scale p {
-  text-align: left;
+.map-legend .level-scale li {
+  font-size: 12px;
+}
+
+.map-legend .level-scale i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dashboard.is-map-stage .control-panel .map-legend .legend-block {
+  padding-top: 12px;
 }
 
 .dashboard.is-map-stage .map-frame .leaflet-control-attribution {

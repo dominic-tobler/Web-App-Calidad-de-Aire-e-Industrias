@@ -28,7 +28,7 @@ export function PollutantTip({ pollutant }: { pollutant: Pollutant }) {
 export function LevelTip() {
   return (
     <HoverTip label="¿Qué significa?" contentKey="nivel">
-      <strong>Nivel del día</strong>
+      <strong>Niveles de contaminación</strong>
       <ul className="level-tip-list">
         {AIR_QUALITY_LEVELS.map((level) => (
           <li key={level.id}>

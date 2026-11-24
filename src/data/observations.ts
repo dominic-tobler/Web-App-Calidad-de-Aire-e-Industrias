@@ -27,6 +27,14 @@ const VARIABLE_POLLUTANT: Record<string, Pollutant> = {
 const readingsByHour = new Map<string, Record<string, number>>()
 const seriesByStation = new Map<string, Array<number | null>>()
 const totalsByDay = new Map<string, { sum: number[]; count: number[] }>()
+const directionByHour = new Map<string, Record<string, number>>()
+const speedByHour = new Map<string, Record<string, number>>()
+
+export type WindHour = {
+  hour: number
+  direction: number
+  speed: number | null
+}
 
 let pending: Promise<void> | null = null
 
@@ -99,6 +107,27 @@ export function dailyAverageReadings(
   return averages
 }
 
+export function windOnDay(
+  stationId: string,
+  year: number,
+  month: number,
+  day: number,
+): WindHour[] {
+  const hours: WindHour[] = []
+  for (let hour = 0; hour < 24; hour += 1) {
+    const key = windKey(year, month, day, hour)
+    const direction = directionByHour.get(key)?.[stationId]
+    if (direction == null || !Number.isFinite(direction)) continue
+    const speed = speedByHour.get(key)?.[stationId]
+    hours.push({
+      hour,
+      direction,
+      speed: speed == null || !Number.isFinite(speed) ? null : speed,
+    })
+  }
+  return hours
+}
+
 export function averageReading(values: Array<number | null>): number | null {
   let sum = 0
   let count = 0
@@ -116,17 +145,23 @@ function parseObservations(csv: string): void {
     const line = lines[index]
     if (!line) continue
     const cells = line.split(",")
-    const pollutant = VARIABLE_POLLUTANT[cells[1]]
+    const code = cells[1]?.trim()
     const value = Number(cells[2])
     const stationId = cells[5]?.trim()
     const stamp = cells[0]
-    if (!pollutant || !stationId || !Number.isFinite(value)) continue
+    if (!code || !stationId || !Number.isFinite(value)) continue
     const year = Number(stamp.slice(0, 4))
     const month = Number(stamp.slice(5, 7)) - 1
     const day = Number(stamp.slice(8, 10))
     const hour = Number(stamp.slice(11, 13))
     if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue
     const local = colombiaFromUtc(year, month, day, hour)
+    if (code === "WDD" || code === "WDS") {
+      addWind(code, stationId, local.year, local.month, local.day, local.hour, value)
+      continue
+    }
+    const pollutant = VARIABLE_POLLUTANT[code]
+    if (!pollutant) continue
     addReading(pollutant, stationId, local.year, local.month, local.day, local.hour, value)
   }
 }
@@ -169,6 +204,29 @@ function addReading(
   } else {
     totals.sum[hour] += value - previous
   }
+}
+
+function addWind(
+  code: "WDD" | "WDS",
+  stationId: string,
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  value: number,
+): void {
+  const store = code === "WDD" ? directionByHour : speedByHour
+  const key = windKey(year, month, day, hour)
+  let stations = store.get(key)
+  if (!stations) {
+    stations = {}
+    store.set(key, stations)
+  }
+  stations[stationId] = value
+}
+
+function windKey(year: number, month: number, day: number, hour: number): string {
+  return `${year}|${month}|${day}|${hour}`
 }
 
 function hourKey(pollutant: Pollutant, year: number, month: number, day: number, hour: number): string {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import {
+  circle,
   circleMarker,
   divIcon,
   geoJSON,
@@ -8,6 +9,7 @@ import {
   layerGroup,
   map as createMap,
   marker,
+  polygon,
   polyline,
   tileLayer,
   type LayerGroup,
@@ -17,13 +19,16 @@ import {
 import "leaflet/dist/leaflet.css"
 import { boyacaMunicipalities, municipalities } from "../../data/municipalities"
 import {
+  AIR_QUALITY_LEVELS,
   airQualityLevel,
   formatReading,
   pollutantLabel,
   type Pollutant,
 } from "../../domain/airQuality"
+import { LevelTip } from "../PollutantTip"
 
 import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../domain/industry"
+import { destination } from "../../domain/wind"
 import {
   stationPlace,
   stationStatusLabel,
@@ -39,6 +44,9 @@ type CundinamarcaMapProps = {
   stations: Station[]
   selectedStationId: string | null
   links: StationLink[]
+  searchRadiusKm?: number | null
+  windBearing?: number | null
+  windSpanDeg?: number | null
   hourLabel: string
   pollutant: Pollutant
   readings: Record<string, number>
@@ -57,6 +65,9 @@ export function CundinamarcaMap({
   stations,
   selectedStationId,
   links,
+  searchRadiusKm = null,
+  windBearing = null,
+  windSpanDeg = null,
   hourLabel,
   pollutant,
   readings,
@@ -66,6 +77,7 @@ export function CundinamarcaMap({
   const hostRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const industriesLayerRef = useRef<LayerGroup | null>(null)
+  const radiusLayerRef = useRef<LayerGroup | null>(null)
   const linksLayerRef = useRef<LayerGroup | null>(null)
   const stationsLayerRef = useRef<LayerGroup | null>(null)
   const overviewBoundsRef = useRef<LatLngBounds | null>(null)
@@ -141,16 +153,23 @@ export function CundinamarcaMap({
     bounds.extend(boyaca.getBounds())
     for (const station of stations) bounds.extend([station.latitude, station.longitude])
     overviewBoundsRef.current = bounds
+    map.createPane("search-radius")
     map.createPane("industries")
     map.createPane("station-links")
     map.createPane("stations")
+    const radiusPane = map.getPane("search-radius")
     const industriesPane = map.getPane("industries")
     const linksPane = map.getPane("station-links")
     const stationsPane = map.getPane("stations")
+    if (radiusPane) {
+      radiusPane.style.zIndex = "405"
+      radiusPane.style.pointerEvents = "none"
+    }
     if (industriesPane) industriesPane.style.zIndex = "410"
     if (linksPane) linksPane.style.zIndex = "420"
     if (stationsPane) stationsPane.style.zIndex = "430"
 
+    radiusLayerRef.current = layerGroup().addTo(map)
     industriesLayerRef.current = layerGroup().addTo(map)
     linksLayerRef.current = layerGroup().addTo(map)
     stationsLayerRef.current = layerGroup().addTo(map)
@@ -181,6 +200,7 @@ export function CundinamarcaMap({
       map.remove()
       mapRef.current = null
       industriesLayerRef.current = null
+      radiusLayerRef.current = null
       linksLayerRef.current = null
       stationsLayerRef.current = null
     }
@@ -191,10 +211,13 @@ export function CundinamarcaMap({
     if (!layer) return
 
     layer.clearLayers()
+    const linked = new Set(links.map((link) => link.industry.id))
+    const dimOutsiders = selectedStationId != null
     for (const industry of industries) {
       marker([industry.latitude, industry.longitude], {
         pane: "industries",
         icon: ICONS[industry.status],
+        opacity: dimOutsiders && !linked.has(industry.id) ? 0.28 : 1,
         title: placeWithDepartment(industry.municipality, industry.department),
         keyboard: true,
       })
@@ -206,7 +229,7 @@ export function CundinamarcaMap({
         })
         .addTo(layer)
     }
-  }, [industries])
+  }, [industries, links, selectedStationId])
 
   useEffect(() => {
     const layer = linksLayerRef.current
@@ -234,11 +257,58 @@ export function CundinamarcaMap({
   }, [links, selectedStationId, stations])
 
   useEffect(() => {
+    const layer = radiusLayerRef.current
+    if (!layer) return
+    layer.clearLayers()
+    const station = stations.find((item) => item.id === selectedStationId)
+    if (!station || searchRadiusKm == null) return
+
+    circle([station.latitude, station.longitude], {
+      pane: "search-radius",
+      radius: searchRadiusKm * 1000,
+      color: "#1a4dd9",
+      weight: 1.25,
+      dashArray: "4 4",
+      fill: false,
+      interactive: false,
+    }).addTo(layer)
+
+    if (windBearing == null || windSpanDeg == null) return
+    const points: Array<[number, number]> = [[station.latitude, station.longitude]]
+    for (let step = 0; step <= 10; step += 1) {
+      const bearing = windBearing - windSpanDeg / 2 + (windSpanDeg * step) / 10
+      points.push(destination(station.latitude, station.longitude, bearing, searchRadiusKm))
+    }
+    polygon(points, {
+      pane: "search-radius",
+      color: "#1a4dd9",
+      weight: 1.5,
+      fillColor: "#1a4dd9",
+      fillOpacity: 0.2,
+      interactive: false,
+    }).addTo(layer)
+  }, [searchRadiusKm, selectedStationId, stations, windBearing, windSpanDeg])
+
+  useEffect(() => {
     const map = mapRef.current
     const host = hostRef.current
     if (!map || !host) return
     const station = stations.find((item) => item.id === selectedStationId)
     const padding = overlayPadding(host)
+
+    if (station && searchRadiusKm != null) {
+      const north = destination(station.latitude, station.longitude, 0, searchRadiusKm * 1.08)
+      const south = destination(station.latitude, station.longitude, 180, searchRadiusKm * 1.08)
+      const east = destination(station.latitude, station.longitude, 90, searchRadiusKm * 1.08)
+      const west = destination(station.latitude, station.longitude, 270, searchRadiusKm * 1.08)
+      glideToBounds(map, latLngBounds([south[0], west[1]], [north[0], east[1]]), {
+        ...padding,
+        maxZoom: 13,
+        duration: 1.2,
+      })
+      hadSelectionRef.current = true
+      return
+    }
 
     if (station && links.length > 0) {
       const focus = latLngBounds([
@@ -264,7 +334,7 @@ export function CundinamarcaMap({
       })
       hadSelectionRef.current = false
     }
-  }, [links, selectedStationId, stations])
+  }, [links, searchRadiusKm, selectedStationId, stations])
 
   useEffect(() => {
     const layer = stationsLayerRef.current
@@ -353,36 +423,45 @@ export function CundinamarcaMap({
 export function MapLegend() {
   return (
     <section className="map-legend" aria-label="Leyenda del mapa">
-      <div className="symbol-legend">
-        <div className="territory-legend">
-          <span>
-            <span className="territory-swatch is-cundinamarca" /> Cundinamarca
-          </span>
-          <span>
-            <span className="territory-swatch is-boyaca" /> Boyacá
-          </span>
-        </div>
-        <div className="symbol-row">
-          <span>
-            <span className="station-dot" /> Estación
-          </span>
-          <span>
-            <IndustryIcon fill="#243830" />
-            <span className="symbol-caption">Industria en seguimiento</span>
-          </span>
-          <span>
-            <IndustryIcon fill="#d6453d" />
-            <span className="symbol-caption">Industria sancionada</span>
-          </span>
-        </div>
+      <div className="legend-block">
+        <h2>Capas del mapa</h2>
+        <ul className="legend-items">
+          <li>
+            <span className="territory-swatch is-cundinamarca" />
+            Cundinamarca
+          </li>
+          <li>
+            <span className="territory-swatch is-boyaca" />
+            Boyacá
+          </li>
+          <li>
+            <span className="station-dot" />
+            Estación
+          </li>
+          <li>
+            <IndustryIcon fill={STATUS_FILL.seguimiento} />
+            Industria en seguimiento
+          </li>
+          <li>
+            <IndustryIcon fill={STATUS_FILL.sancionada} />
+            Industria sancionada
+          </li>
+        </ul>
       </div>
-      <div className="contamination-scale">
-        <p>Nivel en las estaciones</p>
-        <div className="scale-row">
-          <span>Bajo</span>
-          <div className="scale-bar" />
-          <span>Alto</span>
-        </div>
+      <div className="legend-block">
+        <h2>Nivel de contaminación</h2>
+        <p>
+          Una sola escala. En el calendario pinta el promedio del día; en el mapa, la lectura de cada
+          estación a la hora elegida. <LevelTip />
+        </p>
+        <ul className="level-scale" aria-label="Colores del nivel de contaminación">
+          {AIR_QUALITY_LEVELS.map((level) => (
+            <li key={level.id}>
+              <i style={{ background: level.color }} />
+              {level.label}
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )

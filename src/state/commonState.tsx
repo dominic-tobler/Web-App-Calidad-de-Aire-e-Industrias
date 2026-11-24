@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react"
 import type { Pollutant } from "../domain/airQuality"
+import { hourlySeries } from "../data/observations"
 import { daysInMonth, type Year } from "../domain/time"
 
 export type CommonView = "exploracion" | "analisis"
@@ -65,7 +66,11 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!state.playing) return
     const timer = window.setInterval(() => {
-      setState((current) => ({ ...current, hour: (current.hour + 1) % 24 }))
+      setState((current) => {
+        const hour = nextHourWithReading(current)
+        if (hour == null) return { ...current, playing: false }
+        return { ...current, hour }
+      })
     }, 800)
     return () => window.clearInterval(timer)
   }, [state.playing])
@@ -91,7 +96,15 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
       setView: (view) => patch({ view }),
       setAnalysisMode: (analysisMode) => patch({ analysisMode }),
       setMapExpanded: (mapExpanded) => patch({ mapExpanded }),
-      setPlaying: (playing) => patch({ playing }),
+      setPlaying: (playing) => {
+        setState((current) => {
+          if (!playing) return { ...current, playing: false }
+          if (readingAtState(current) != null) return { ...current, playing: true }
+          const hour = nextHourWithReading(current)
+          if (hour == null) return current
+          return { ...current, playing: true, hour }
+        })
+      },
       setSelectedStation: (id) => {
         setState((current) => ({
           ...current,
@@ -118,6 +131,32 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
   }, [state])
 
   return <CommonContext.Provider value={value}>{children}</CommonContext.Provider>
+}
+
+function readingAtState(current: CommonState): number | null {
+  return hourlySeries(
+    current.pollutant,
+    current.year,
+    current.month,
+    current.day,
+    current.selectedStationId,
+  )[current.hour] ?? null
+}
+
+// La siguiente hora del mismo día que sí tiene medición. Null si no hay otra.
+function nextHourWithReading(current: CommonState): number | null {
+  const series = hourlySeries(
+    current.pollutant,
+    current.year,
+    current.month,
+    current.day,
+    current.selectedStationId,
+  )
+  for (let step = 1; step < 24; step += 1) {
+    const hour = (current.hour + step) % 24
+    if (series[hour] != null) return hour
+  }
+  return null
 }
 
 export function useCommonState(): CommonContextValue {
