@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import * as d3 from "d3"
 import { exposureHours, icaBands, icaCuts } from "../domain/icaLevels"
+import { COLOMBIA_TIME_LABEL } from "../../../domain/time"
 import { hourToDate, type SeriesPoint, type StationSeries } from "../data/measurements"
 import { variableById, type VariableId } from "../domain/variables"
 
@@ -141,7 +142,7 @@ export function MovingAverageSeries({
         .attr("fill", "#595959")
         .attr("font-size", 11)
         .attr("font-family", FONT)
-        .text("Hora UTC (rango seleccionado)")
+        .text("Hora de Colombia (rango seleccionado)")
 
       const line = d3
         .line<SeriesPoint>()
@@ -233,7 +234,7 @@ export function MovingAverageSeries({
           const rows = series
             .map((item) => ({ id: item.stationId, value: item.points[offset]?.value ?? null }))
             .sort((left, right) => (right.value ?? -Infinity) - (left.value ?? -Infinity))
-          tip.innerHTML = `<strong>${d3.utcFormat("%d/%m/%Y %H:00")(hourToDate(hour))} UTC</strong>${rows
+          tip.innerHTML = `<strong>${d3.utcFormat("%d/%m/%Y %H:00")(hourToDate(hour))} ${COLOMBIA_TIME_LABEL}</strong>${rows
             .map(
               (row) =>
                 `<span><i style="background:${colors[row.id] ?? "#1a3c32"}"></i>Est. ${row.id}<b>${

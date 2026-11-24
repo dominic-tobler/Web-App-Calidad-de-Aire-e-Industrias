@@ -161,10 +161,7 @@ export function CundinamarcaMap({
     const fit = () => {
       if (host.clientWidth < 40 || host.clientHeight < 40 || !bounds.isValid()) return false
       map.invalidateSize()
-      map.fitBounds(bounds, {
-        paddingTopLeft: [28, 52],
-        paddingBottomRight: [28, 96],
-      })
+      map.fitBounds(bounds, overlayPadding(host))
       return true
     }
 
@@ -238,8 +235,10 @@ export function CundinamarcaMap({
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    const host = hostRef.current
+    if (!map || !host) return
     const station = stations.find((item) => item.id === selectedStationId)
+    const padding = overlayPadding(host)
 
     if (station && links.length > 0) {
       const focus = latLngBounds([
@@ -250,8 +249,7 @@ export function CundinamarcaMap({
         focus.extend([link.industry.latitude, link.industry.longitude])
       }
       glideToBounds(map, focus, {
-        paddingTopLeft: [36, 48],
-        paddingBottomRight: [36, 108],
+        ...padding,
         maxZoom: 15,
         duration: 1.2,
       })
@@ -261,8 +259,7 @@ export function CundinamarcaMap({
 
     if (hadSelectionRef.current && overviewBoundsRef.current) {
       glideToBounds(map, overviewBoundsRef.current, {
-        paddingTopLeft: [28, 52],
-        paddingBottomRight: [28, 96],
+        ...padding,
         duration: 1.15,
       })
       hadSelectionRef.current = false
@@ -305,6 +302,18 @@ export function CundinamarcaMap({
     flyZoom(map, direction === "in" ? 1 : -1)
   }
 
+  const frameOverview = () => {
+    const map = mapRef.current
+    const host = hostRef.current
+    const bounds = overviewBoundsRef.current
+    if (!map || !host || !bounds?.isValid()) return
+    glideToBounds(map, bounds, {
+      ...overlayPadding(host),
+      duration: 1.15,
+    })
+    hadSelectionRef.current = false
+  }
+
   return (
     <div className="map-frame">
       <div
@@ -323,45 +332,79 @@ export function CundinamarcaMap({
         <button type="button" onClick={() => zoomBy("out")} aria-label="Alejar mapa">
           −
         </button>
+        <button type="button" className="map-reframe" onClick={frameOverview} aria-label="Reencuadrar mapa" title="Reencuadrar mapa">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              d="M6 2.5H3.5V5M10 2.5h2.5V5M13.5 11v2.5H11M5 13.5H2.5V11"
+            />
+          </svg>
+        </button>
       </div>
 
       {municipality && <div className="municipality-label">{municipality}</div>}
-
-      <div className="map-footer">
-        <div className="symbol-legend">
-          <div className="territory-legend">
-            <span>
-              <span className="territory-swatch is-cundinamarca" /> Cundinamarca
-            </span>
-            <span>
-              <span className="territory-swatch is-boyaca" /> Boyacá
-            </span>
-          </div>
-          <div className="symbol-row">
-            <span>
-              <span className="station-dot" /> Estación
-            </span>
-            <span>
-              <IndustryIcon fill="#243830" />
-              <span className="symbol-caption">Industria en seguimiento</span>
-            </span>
-            <span>
-              <IndustryIcon fill="#d6453d" />
-              <span className="symbol-caption">Industria sancionada</span>
-            </span>
-          </div>
-        </div>
-        <div className="contamination-scale">
-          <p>Nivel de contaminación</p>
-          <div className="scale-row">
-            <span>Bajo</span>
-            <div className="scale-bar" />
-            <span>Alto</span>
-          </div>
-        </div>
-      </div>
     </div>
   )
+}
+
+export function MapLegend() {
+  return (
+    <section className="map-legend" aria-label="Leyenda del mapa">
+      <div className="symbol-legend">
+        <div className="territory-legend">
+          <span>
+            <span className="territory-swatch is-cundinamarca" /> Cundinamarca
+          </span>
+          <span>
+            <span className="territory-swatch is-boyaca" /> Boyacá
+          </span>
+        </div>
+        <div className="symbol-row">
+          <span>
+            <span className="station-dot" /> Estación
+          </span>
+          <span>
+            <IndustryIcon fill="#243830" />
+            <span className="symbol-caption">Industria en seguimiento</span>
+          </span>
+          <span>
+            <IndustryIcon fill="#d6453d" />
+            <span className="symbol-caption">Industria sancionada</span>
+          </span>
+        </div>
+      </div>
+      <div className="contamination-scale">
+        <p>Nivel en las estaciones</p>
+        <div className="scale-row">
+          <span>Bajo</span>
+          <div className="scale-bar" />
+          <span>Alto</span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function overlayPadding(host: HTMLElement) {
+  const stage = host.closest<HTMLElement>(".is-map-stage")
+  if (!stage) {
+    return {
+      paddingTopLeft: [28, 52] as [number, number],
+      paddingBottomRight: [28, 96] as [number, number],
+    }
+  }
+  const styles = getComputedStyle(stage)
+  const px = (name: string, fallback: number) => {
+    const value = Number.parseFloat(styles.getPropertyValue(name))
+    return Number.isFinite(value) ? value : fallback
+  }
+  return {
+    paddingTopLeft: [px("--map-pad-left", 28), px("--map-pad-top", 52)] as [number, number],
+    paddingBottomRight: [px("--map-pad-right", 28), px("--map-pad-bottom", 96)] as [number, number],
+  }
 }
 
 const BOYACA_STYLE = {

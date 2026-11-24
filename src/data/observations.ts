@@ -1,5 +1,6 @@
 import measurementsUrl from "../../Data/datos_24_25.csv?url"
 import type { Pollutant } from "../domain/airQuality"
+import { colombiaFromUtc } from "../domain/time"
 
 export type Observation = {
   pollutant: Pollutant
@@ -125,7 +126,8 @@ function parseObservations(csv: string): void {
     const day = Number(stamp.slice(8, 10))
     const hour = Number(stamp.slice(11, 13))
     if (!Number.isFinite(hour) || hour < 0 || hour > 23) continue
-    addReading(pollutant, stationId, year, month, day, hour, value)
+    const local = colombiaFromUtc(year, month, day, hour)
+    addReading(pollutant, stationId, local.year, local.month, local.day, local.hour, value)
   }
 }
 

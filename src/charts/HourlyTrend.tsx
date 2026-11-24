@@ -7,7 +7,7 @@ import {
   pollutantLabel,
   type Pollutant,
 } from "../domain/airQuality"
-import { formatCompactInstant, formatHour } from "../domain/time"
+import { COLOMBIA_TIME_LABEL, formatCompactInstant, formatHour } from "../domain/time"
 
 type HourPoint = {
   hour: number
@@ -112,7 +112,7 @@ export function HourlyTrend({
 
       const axis = d3
         .axisBottom(xScale)
-        .tickValues([0, 3, 6, 9, 12, 15, 18, 21, 23])
+        .tickValues(width < 460 ? [0, 6, 12, 18, 23] : [0, 3, 6, 9, 12, 15, 18, 21, 23])
         .tickFormat((value) => formatHour(Number(value)).slice(0, 2))
 
       plot
@@ -215,13 +215,13 @@ export function HourlyTrend({
         <div>
           <h2>Tendencia horaria</h2>
           <p>
-            {formatCompactInstant(year, month, day)} · {pollutantLabel(pollutant)} · {seriesLabel}
+            {formatCompactInstant(year, month, day)} · hora de Colombia · {pollutantLabel(pollutant)} · {seriesLabel}
           </p>
         </div>
         <p>
           {selected == null
-            ? `Sin medición a las ${formatHour(hour)} UTC`
-            : `${formatAxis(selected)} a las ${formatHour(hour)} UTC`}
+            ? `Sin medición a las ${formatHour(hour)} ${COLOMBIA_TIME_LABEL}`
+            : `${formatAxis(selected)} a las ${formatHour(hour)} ${COLOMBIA_TIME_LABEL}`}
         </p>
       </header>
       <div className="trend-plot" ref={wrapRef}>

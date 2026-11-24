@@ -36,6 +36,25 @@ export function formatHour(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`
 }
 
+// America/Bogota no usa horario de verano: siempre está 5 horas detrás de UTC.
+export const COLOMBIA_OFFSET_HOURS = -5
+export const COLOMBIA_TIME_LABEL = "COT"
+
+export function colombiaFromUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+): { year: number; month: number; day: number; hour: number } {
+  const shifted = new Date(Date.UTC(year, month, day, hour + COLOMBIA_OFFSET_HOURS))
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth(),
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+  }
+}
+
 const SHORT_MONTHS = [
   "ene",
   "feb",

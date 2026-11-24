@@ -1,7 +1,9 @@
 import measurementsUrl from "../../../../Data/datos_24_25.csv?url"
+import { COLOMBIA_OFFSET_HOURS } from "../../../domain/time"
 import { VARIABLE_BY_CODE, type VariableId } from "../domain/variables"
 
 // Cada medición se guarda por índice de hora desde el 1 de enero de 2024 a las 00:00 UTC.
+// Las fechas y horas que ve el usuario son de Colombia (UTC−5).
 export const BASE_MS = Date.UTC(2024, 0, 1)
 export const HOUR_MS = 3_600_000
 // Los valores inválidos (9999, saturación 985, fuera de rango) ya se quitan en
@@ -52,7 +54,7 @@ export function seriesKey(stationId: string, variable: VariableId): string {
 }
 
 export function hourOfDay(hour: number): number {
-  return ((hour % 24) + 24) % 24
+  return ((hour + COLOMBIA_OFFSET_HOURS) % 24 + 24) % 24
 }
 
 export function hourIncluded(hour: number, window: TimeWindow): boolean {
@@ -169,13 +171,15 @@ export function firstHourWithData(store: MeasurementStore, fromHour: number, toH
   return first
 }
 
+// La fecha resultante usa sus componentes UTC como reloj de Colombia, para formatear con utcFormat.
 export function hourToDate(hour: number): Date {
-  return new Date(BASE_MS + hour * HOUR_MS)
+  return new Date(BASE_MS + (hour + COLOMBIA_OFFSET_HOURS) * HOUR_MS)
 }
 
+// Medianoche en Colombia de ese día civil: 05:00 UTC.
 export function dayStartHour(isoDate: string): number {
   const [year, month, day] = isoDate.split("-").map(Number)
-  return Math.round((Date.UTC(year, month - 1, day) - BASE_MS) / HOUR_MS)
+  return Math.round((Date.UTC(year, month - 1, day, -COLOMBIA_OFFSET_HOURS) - BASE_MS) / HOUR_MS)
 }
 
 export function hourToIsoDate(hour: number): string {

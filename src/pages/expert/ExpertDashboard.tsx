@@ -3,6 +3,7 @@ import * as d3 from "d3"
 import { industries } from "../../data/industries"
 import { stations } from "../../data/stations"
 import { formatReading } from "../../domain/airQuality"
+import { COLOMBIA_TIME_LABEL } from "../../domain/time"
 import { SOURCE_OPTIONS, statusLabel } from "../../domain/industry"
 import type { Station } from "../../domain/station"
 import { CategoryBars, type BarGroup } from "./charts/CategoryBars"
@@ -46,7 +47,7 @@ import "./expert.css"
 
 const MIN_CORRELATION_DAYS = 5
 const DEFAULT_RANGE_DAYS = 31
-// Sin clic en la serie, el mapa usa el mediodía (12:00 UTC) del primer día del rango.
+// Sin clic en la serie, el mapa usa el mediodía (12:00 COT) del primer día del rango.
 const DEFAULT_MAP_HOUR_OF_DAY = 12
 
 // Recuadro inicial sobre la Sabana Occidente, donde se concentran estaciones e industrias.
@@ -97,7 +98,7 @@ export function ExpertDashboard() {
   function choosePeriod(id: PeriodId) {
     const next = periodById(id)
     const firstHour = store ? firstHourWithData(store, dayStartHour(next.first), dayStartHour(next.last) + 23) : null
-    const start = firstHour == null ? next.first : hourToIsoDate(firstHour)
+    const start = clampToPeriod(firstHour == null ? next.first : hourToIsoDate(firstHour), next)
     setPeriodId(id)
     setDateFrom(start)
     setDateTo(clampToPeriod(addDays(start, DEFAULT_RANGE_DAYS - 1), next))
@@ -298,7 +299,7 @@ export function ExpertDashboard() {
             </div>
           </div>
           <div className="range-group">
-            <span>Rango de fechas (inicio – fin)</span>
+            <span>Rango de fechas, hora de Colombia</span>
             <div className="range-inputs">
               <input
                 type="date"
@@ -480,5 +481,5 @@ function formatDay(hour: number): string {
 }
 
 function formatInstant(hour: number): string {
-  return `${d3.utcFormat("%d/%m/%Y %H:00")(hourToDate(hour))} UTC`
+  return `${d3.utcFormat("%d/%m/%Y %H:00")(hourToDate(hour))} ${COLOMBIA_TIME_LABEL}`
 }

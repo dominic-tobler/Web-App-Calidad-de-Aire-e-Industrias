@@ -21,8 +21,8 @@ import {
 import { formatDistance } from "../../domain/geo"
 import { emissionSourceKey, emissionSourceLabel, placeWithDepartment, statusLabel } from "../../domain/industry"
 import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
-import { formatHour, formatInstant, type Year } from "../../domain/time"
-import { CundinamarcaMap } from "../../layouts/map/CundinamarcaMap"
+import { COLOMBIA_TIME_LABEL, formatHour, formatInstant, type Year } from "../../domain/time"
+import { CundinamarcaMap, MapLegend } from "../../layouts/map/CundinamarcaMap"
 import { LevelTip } from "../../layouts/PollutantTip"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
@@ -119,20 +119,30 @@ export function CommonDashboard() {
   const measuredStations = Object.keys(hourReadings).length
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Calidad del aire en Cundinamarca</h1>
-        <p className="header-context">
-          {observationsState === "loading"
-            ? "Cargando mediciones…"
-            : observationsState === "error"
-              ? observationsError
-              : `${formatInstant(state.year, state.month, state.day)} · ${formatHour(state.hour)} UTC · ${pollutantLabel(state.pollutant)}`}
-        </p>
-      </header>
-
+    <div className="dashboard is-map-stage">
       <div className="lines-layout">
+        <CundinamarcaMap
+          industries={visibleIndustries}
+          stations={stations}
+          selectedStationId={state.selectedStationId}
+          links={nearest}
+          hourLabel={`${formatHour(state.hour)} ${COLOMBIA_TIME_LABEL}`}
+          pollutant={state.pollutant}
+          readings={hourReadings}
+          onSelectStation={setSelectedStation}
+        />
+
         <aside className="control-panel">
+          <header className="dashboard-header">
+            <h1>Calidad del aire en Cundinamarca</h1>
+            <p className="header-context">
+              {observationsState === "loading"
+                ? "Cargando mediciones…"
+                : observationsState === "error"
+                  ? observationsError
+                  : `${formatInstant(state.year, state.month, state.day)} · ${formatHour(state.hour)} ${COLOMBIA_TIME_LABEL} · ${pollutantLabel(state.pollutant)}`}
+            </p>
+          </header>
           <EmissionFilters
             source={state.source}
             pollutant={state.pollutant}
@@ -164,20 +174,10 @@ export function CommonDashboard() {
               </div>
             </div>
           </section>
+          <MapLegend />
         </aside>
 
-        <CundinamarcaMap
-          industries={visibleIndustries}
-          stations={stations}
-          selectedStationId={state.selectedStationId}
-          links={nearest}
-          hourLabel={`${formatHour(state.hour)} UTC`}
-          pollutant={state.pollutant}
-          readings={hourReadings}
-          showHourBadge
-          onSelectStation={setSelectedStation}
-        />
-
+        <div className="insight-column">
         <aside className="station-panel">
           <header>
             <h2>{selectedStation ? stationTitle(selectedStation) : "Estación seleccionada"}</h2>
@@ -192,7 +192,7 @@ export function CommonDashboard() {
               <>
                 <p className="station-reading">
                   {selectedReading == null
-                    ? `Sin medición de ${pollutantLabel(state.pollutant)} a las ${formatHour(state.hour)} UTC`
+                    ? `Sin medición de ${pollutantLabel(state.pollutant)} a las ${formatHour(state.hour)} ${COLOMBIA_TIME_LABEL}`
                     : `${pollutantLabel(state.pollutant)} ${formatReading(selectedReading)}${selectedLevel ? ` · ${selectedLevel.label}` : ""}`}
                 </p>
                 <p className="station-coords">
@@ -237,6 +237,7 @@ export function CommonDashboard() {
           seriesLabel={selectedStation ? stationTitle(selectedStation) : "Promedio de estaciones"}
           onHour={setHour}
         />
+        </div>
       </div>
     </div>
   )
@@ -257,10 +258,10 @@ function monthDayLevels(
 
 function coverageMessage(pollutant: Pollutant, measured: number, hour: number): string {
   if (measured === 0) {
-    return `No hay mediciones de ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
+    return `No hay mediciones de ${pollutantLabel(pollutant)} a las ${formatHour(hour)} ${COLOMBIA_TIME_LABEL}.`
   }
   const noun = measured === 1 ? "estación tiene" : "estaciones tienen"
-  return `${measured} ${noun} ${pollutantLabel(pollutant)} a las ${formatHour(hour)} UTC.`
+  return `${measured} ${noun} ${pollutantLabel(pollutant)} a las ${formatHour(hour)} ${COLOMBIA_TIME_LABEL}.`
 }
 
 function formatCoordinate(value: number): string {

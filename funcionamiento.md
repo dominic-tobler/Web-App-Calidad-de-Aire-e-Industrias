@@ -14,7 +14,7 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 - **Recuadro de selección:** con la herramienta activa (botón punteado bajo el zoom), arrastrar dibuja un recuadro, y un clic sin arrastrar lo borra. Al desactivarla, el mapa se puede mover. El recuadro inicial está sobre la Sabana Occidente (`INITIAL_SELECTION`).
 - **Estaciones:**
   - El relleno es el nivel de calidad del aire del valor registrado en la **hora del mapa**, para todas las estaciones (no solo las del recuadro).
-  - Hora del mapa por defecto: 12:00 UTC del primer día del rango. Un clic en la serie de tiempo la cambia; la etiqueta arriba a la izquierda dice la hora y cuántas estaciones tienen dato.
+  - Hora del mapa por defecto: 12:00 hora de Colombia (COT, UTC−5) del primer día del rango. Un clic en la serie de tiempo la cambia; la etiqueta arriba a la izquierda dice la hora y cuántas estaciones tienen dato.
   - El color es el nivel ICA de la Tabla No. 2 del DANE (`domain/icaLevels.ts`): Buena, Moderada, Dañina para grupos sensibles, Dañina, Muy dañina y Peligrosa. La leyenda del mapa muestra los 6 colores.
   - Gris = valor sin categoría ICA (NO₂ por debajo de 1.223 µg/m³); blanco = sin dato a esa hora.
   - Las estaciones dentro del recuadro llevan un anillo del mismo color que su línea en la serie.
@@ -49,10 +49,10 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 
 ## Datos (`data/measurements.ts`)
 
-- `Data/datos_24_25.csv` se carga una vez al abrir la página, del 1 de enero de 2024 al 27 de mayo de 2025, en horas UTC.
+- `Data/datos_24_25.csv` se carga una vez al abrir la página, del 1 de enero de 2024 al 27 de mayo de 2025. El archivo trae horas UTC; la vista las muestra en hora de Colombia (COT, UTC−5, sin horario de verano).
 - Los valores ≥ 9000 se toman como faltantes, igual que en la vista común.
 - PM2.5 y PM10 exactamente iguales a 985 µg/m³ (3.178 filas, tope del equipo) también se toman como faltantes (`PM_SATURATION`).
-- Cada estación y variable se guarda como un arreglo indexado por hora desde el 01/01/2024 00:00 UTC.
+- Cada estación y variable se guarda como un arreglo indexado por hora desde el 01/01/2024 00:00 UTC. Los días del filtro y las etiquetas usan el día civil de Colombia: la medianoche local es las 05:00 UTC.
 
 ## Pendientes conocidos
 
