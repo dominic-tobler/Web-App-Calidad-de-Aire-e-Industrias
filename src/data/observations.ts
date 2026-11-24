@@ -29,6 +29,8 @@ const seriesByStation = new Map<string, Array<number | null>>()
 const totalsByDay = new Map<string, { sum: number[]; count: number[] }>()
 const directionByHour = new Map<string, Record<string, number>>()
 const speedByHour = new Map<string, Record<string, number>>()
+// Meses (año * 12 + mes) con al menos una medición de algún contaminante.
+const monthsWithData = new Set<number>()
 
 export type WindHour = {
   hour: number
@@ -82,6 +84,16 @@ export function hourlySeries(
   const totals = totalsByDay.get(dayKey(pollutant, year, month, day))
   if (!totals) return emptyHours()
   return totals.sum.map((sum, hour) => (totals.count[hour] === 0 ? null : sum / totals.count[hour]))
+}
+
+export type MonthRef = { year: number; month: number }
+
+// Meses con mediciones de cualquier contaminante, en orden. Vacío mientras el CSV no ha cargado.
+// No depende del contaminante elegido para que la navegación del calendario no cambie al filtrar.
+export function monthsWithReadings(): MonthRef[] {
+  return [...monthsWithData]
+    .sort((left, right) => left - right)
+    .map((cursor) => ({ year: Math.floor(cursor / 12), month: cursor % 12 }))
 }
 
 export function daysWithReadings(pollutant: Pollutant, year: number, month: number): number[] {
@@ -175,6 +187,7 @@ function addReading(
   hour: number,
   value: number,
 ): void {
+  monthsWithData.add(year * 12 + month)
   const atHour = hourKey(pollutant, year, month, day, hour)
   let stations = readingsByHour.get(atHour)
   if (!stations) {

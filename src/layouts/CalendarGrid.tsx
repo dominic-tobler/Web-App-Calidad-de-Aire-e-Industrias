@@ -13,6 +13,11 @@ type CalendarGridProps = {
   onNextMonth?: () => void
   previousMonthDisabled?: boolean
   nextMonthDisabled?: boolean
+  // Texto de ayuda de cada flecha (p. ej. a qué mes salta). Se usa como título y etiqueta accesible.
+  previousMonthLabel?: string
+  nextMonthLabel?: string
+  // Aviso corto bajo el mes, p. ej. cuando las flechas saltan un periodo sin datos.
+  notice?: string | null
 }
 
 const DARK_INK_LEVELS = new Set(["buena", "moderada", "sensibles"])
@@ -28,6 +33,9 @@ export function CalendarGrid({
   onNextMonth,
   previousMonthDisabled = false,
   nextMonthDisabled = false,
+  previousMonthLabel = "Mes anterior",
+  nextMonthLabel = "Mes siguiente",
+  notice = null,
 }: CalendarGridProps) {
   const cells = calendarCells(year, month)
   const showMonthNav = onPreviousMonth != null && onNextMonth != null
@@ -40,7 +48,8 @@ export function CalendarGrid({
             type="button"
             onClick={onPreviousMonth}
             disabled={previousMonthDisabled}
-            aria-label="Mes anterior"
+            aria-label={previousMonthLabel}
+            title={previousMonthLabel}
           >
             ‹
           </button>
@@ -51,11 +60,17 @@ export function CalendarGrid({
             type="button"
             onClick={onNextMonth}
             disabled={nextMonthDisabled}
-            aria-label="Mes siguiente"
+            aria-label={nextMonthLabel}
+            title={nextMonthLabel}
           >
             ›
           </button>
         </div>
+      ) : null}
+      {notice ? (
+        <p className="calendar-notice" role="note">
+          {notice}
+        </p>
       ) : null}
       <div className="calendar-body">
         <div className="weekdays">

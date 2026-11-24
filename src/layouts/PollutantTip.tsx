@@ -25,6 +25,27 @@ export function PollutantTip({ pollutant }: { pollutant: Pollutant }) {
   )
 }
 
+// Estados del expediente de cada industria (columna Estado de industries.json).
+export function StatusTip() {
+  return (
+    <HoverTip label="¿Qué significa?" contentKey="estado">
+      <strong>Estado de la industria</strong>
+      <p>
+        <b>Sancionada:</b> la autoridad ambiental le abrió un proceso sancionatorio por sus emisiones
+        al aire: emitir sin permiso o sin cumplirlo, sin los requisitos de ley o por encima de los límites
+        de la norma.
+      </p>
+      <p>
+        <b>En seguimiento:</b> la autoridad ambiental la vigila y revisa que cumpla, sin un proceso
+        sancionatorio abierto.
+      </p>
+      <p className="pollutant-tip-unit">
+        Es el estado de su expediente. No dice cuánto contamina hoy.
+      </p>
+    </HoverTip>
+  )
+}
+
 export function LevelTip() {
   return (
     <HoverTip label="¿Qué significa?" contentKey="nivel">

@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { CommonWindRose } from "../../charts/CommonWindRose"
 import { HourlyTrend } from "../../charts/HourlyTrend"
-import { EMISSION_SOURCE_ALL, industries } from "../../data/industries"
+import { EMISSION_SOURCE_ALL, EMISSION_SOURCE_OPTIONS, industries } from "../../data/industries"
 import {
   averageReading,
   dailyAverageReadings,
   daysWithReadings,
   hourlySeries,
   loadObservations,
+  monthsWithReadings,
   readingAt,
   readingsAtHour,
   windOnDay,
+  type MonthRef,
 } from "../../data/observations"
 import { stations } from "../../data/stations"
 import {
@@ -29,10 +31,26 @@ import {
   WIND_SECTORS,
   type DailyWind,
 } from "../../domain/wind"
-import { emissionSourceKey, emissionSourceLabel, placeWithDepartment, statusLabel } from "../../domain/industry"
+import {
+  countByStatus,
+  emissionSourceKey,
+  emissionSourceLabel,
+  formatPlace,
+  industryMunicipalityKey,
+  placeWithDepartment,
+  statusLabel,
+  type Industry,
+} from "../../domain/industry"
 import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
-import { COLOMBIA_TIME_LABEL, formatHour, formatInstant, type Year } from "../../domain/time"
-import { CundinamarcaMap, MapLegend } from "../../layouts/map/CundinamarcaMap"
+import { COLOMBIA_TIME_LABEL, formatHour, formatInstant, MONTHS, YEARS, type Year } from "../../domain/time"
+import {
+  CundinamarcaMap,
+  MapLegend,
+  type MunicipalityRef,
+} from "../../layouts/map/CundinamarcaMap"
+import { IndustryIcon } from "../../layouts/map/IndustryIcon"
+import { INDUSTRY_STATUS_STYLE } from "../../layouts/map/industryMarkers"
+import { StatusTip } from "../../layouts/PollutantTip"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
 import { EmissionFilters } from "../../layouts/EmissionFilters"
@@ -46,6 +64,7 @@ export function CommonDashboard() {
   const [calendar, setCalendar] = useState(() => ({ year: state.year, month: state.month }))
   const [observationsState, setObservationsState] = useState<"loading" | "ready" | "error">("loading")
   const [observationsError, setObservationsError] = useState<string | null>(null)
+  const [municipality, setMunicipality] = useState<MunicipalityRef | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -63,12 +82,18 @@ export function CommonDashboard() {
     }
   }, [])
 
-  function shiftCalendar(delta: number) {
-    setCalendar((current) => {
-      const cursor = current.year * 12 + current.month + delta
-      if (cursor < 2024 * 12 || cursor > 2025 * 12 + 11) return current
-      return { year: Math.floor(cursor / 12) as Year, month: cursor % 12 }
-    })
+  // Las flechas del calendario solo recorren meses con mediciones y saltan los periodos vacíos.
+  const availableMonths = useMemo(
+    () => monthsWithReadings().filter((ref) => (YEARS as readonly number[]).includes(ref.year)),
+    [observationsState],
+  )
+  const calendarCursor = monthCursor(calendar)
+  const previousMonth = availableMonths.findLast((ref) => monthCursor(ref) < calendarCursor) ?? null
+  const nextMonth = availableMonths.find((ref) => monthCursor(ref) > calendarCursor) ?? null
+  const calendarNav = calendarNavText(observationsState, calendar, previousMonth, nextMonth)
+
+  function goToMonth(target: MonthRef | null) {
+    if (target) setCalendar({ year: target.year as Year, month: target.month })
   }
 
   const visibleIndustries = useMemo(
@@ -143,6 +168,31 @@ export function CommonDashboard() {
     selectedReading == null ? null : airQualityLevel(state.pollutant, selectedReading)
   const measuredStations = Object.keys(hourReadings).length
 
+  // Industrias registradas en el municipio elegido, con el mismo filtro de fuente que el mapa.
+  const municipalityIndustries = useMemo(
+    () =>
+      municipality
+        ? visibleIndustries.filter((industry) => industryMunicipalityKey(industry) === municipality.key)
+        : [],
+    [municipality, visibleIndustries],
+  )
+  const municipalitySources = useMemo(() => topSources(municipalityIndustries), [municipalityIndustries])
+  const sourceFilterLabel =
+    state.source === EMISSION_SOURCE_ALL
+      ? null
+      : (EMISSION_SOURCE_OPTIONS.find((option) => option.id === state.source)?.label ?? null)
+
+  // Estación y municipio se excluyen: elegir uno quita el otro.
+  function selectStation(id: string | null) {
+    if (id != null) setMunicipality(null)
+    setSelectedStation(id)
+  }
+
+  function selectMunicipality(next: MunicipalityRef | null) {
+    setMunicipality((current) => (next && current?.key === next.key ? null : next))
+    if (next) setSelectedStation(null)
+  }
+
   return (
     <div className="dashboard is-map-stage">
       <div className="lines-layout">
@@ -156,7 +206,9 @@ export function CommonDashboard() {
           hourLabel={`${formatHour(state.hour)} ${COLOMBIA_TIME_LABEL}`}
           pollutant={state.pollutant}
           readings={hourReadings}
-          onSelectStation={setSelectedStation}
+          onSelectStation={selectStation}
+          selectedMunicipalityKey={municipality?.key ?? null}
+          onSelectMunicipality={selectMunicipality}
         />
 
         <aside className="control-panel">
@@ -185,10 +237,13 @@ export function CommonDashboard() {
               markedDays={markedDays}
               dayLevels={dayLevels}
               onDay={(day) => setDate(calendar.year, calendar.month, day)}
-              onPreviousMonth={() => shiftCalendar(-1)}
-              onNextMonth={() => shiftCalendar(1)}
-              previousMonthDisabled={calendar.year === 2024 && calendar.month === 0}
-              nextMonthDisabled={calendar.year === 2025 && calendar.month === 11}
+              onPreviousMonth={() => goToMonth(previousMonth)}
+              onNextMonth={() => goToMonth(nextMonth)}
+              previousMonthDisabled={previousMonth == null}
+              nextMonthDisabled={nextMonth == null}
+              previousMonthLabel={calendarNav.previous}
+              nextMonthLabel={calendarNav.next}
+              notice={calendarNav.notice}
             />
             <p className="day-level-status">
               {dayAverage == null ? (
@@ -206,21 +261,70 @@ export function CommonDashboard() {
               )}
             </p>
           </section>
-          <MapLegend />
+          <HourlyTrend
+            hour={state.hour}
+            pollutant={state.pollutant}
+            series={series}
+            seriesLabel={selectedStation ? stationTitle(selectedStation) : "Promedio de estaciones"}
+            playing={state.playing}
+            onHour={setHour}
+            onPlaying={setPlaying}
+          />
         </aside>
 
         <div className="insight-column">
         <aside className="station-panel">
           <header>
-            <h2>{selectedStation ? stationTitle(selectedStation) : "Estación seleccionada"}</h2>
+            <h2>
+              {selectedStation
+                ? stationTitle(selectedStation)
+                : municipality
+                  ? formatPlace(municipality.name)
+                  : "Estación o municipio"}
+            </h2>
             <p>
               {selectedStation
                 ? `${stationPlace(selectedStation)} · ${stationStatusLabel(selectedStation)}`
-                : "El círculo marca las industrias dentro del radio"}
+                : municipality
+                  ? municipalitySubtitle(municipality)
+                  : "Haz clic en una estación o en un municipio del mapa"}
             </p>
           </header>
           <div className="station-body">
-            {selectedStation ? (
+            {!selectedStation && municipality ? (
+              <>
+                <p className="station-reading">
+                  {municipalityIndustries.length === 0
+                    ? "No hay industrias registradas aquí"
+                    : `${municipalityIndustries.length} ${municipalityIndustries.length === 1 ? "industria registrada" : "industrias registradas"}`}
+                </p>
+                {sourceFilterLabel && (
+                  <p className="wind-note">Solo cuenta la fuente «{sourceFilterLabel}», como el filtro.</p>
+                )}
+                {municipalityIndustries.length > 0 && (
+                  <>
+                    <StatusCounts counts={countByStatus(municipalityIndustries)} />
+                    <h3 className="nearest-title">Fuentes de emisión más comunes</h3>
+                    <ol className="nearest-list">
+                      {municipalitySources.top.map((source) => (
+                        <li key={source.key}>
+                          <strong>{source.label}</strong>
+                          <span className="nearest-distance">{source.count}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    {municipalitySources.rest > 0 && (
+                      <p className="wind-note">
+                        y {municipalitySources.rest} {municipalitySources.rest === 1 ? "tipo" : "tipos"} más
+                      </p>
+                    )}
+                  </>
+                )}
+                <p className="wind-note">
+                  Elige una estación para ver de dónde vino el viento. Otro clic en el municipio lo quita.
+                </p>
+              </>
+            ) : selectedStation ? (
               <>
                 <p className="station-reading">
                   {selectedReading == null
@@ -247,6 +351,9 @@ export function CommonDashboard() {
                   {nearby.length > 0 ? <span className="nearest-count">{nearby.length}</span> : null}
                 </h3>
                 <p className="wind-note">{nearbyNote(wind.regions.length > 0)}</p>
+                {nearby.length > 0 && (
+                  <StatusCounts counts={countByStatus(nearby.map(({ industry }) => industry))} />
+                )}
                 {nearby.length === 0 ? (
                   <p>Ninguna industria visible en ese radio con el filtro actual.</p>
                 ) : (
@@ -277,26 +384,115 @@ export function CommonDashboard() {
                 <p>{coverageMessage(state.pollutant, measuredStations, state.hour)}</p>
                 <p>
                   Elige una estación para ver de dónde vino el viento y las industrias dentro de{" "}
-                  {SEARCH_RADIUS_KM} km.
+                  {SEARCH_RADIUS_KM} km, o un municipio para ver cuántas industrias tiene registradas.
                 </p>
               </>
             )}
           </div>
         </aside>
 
-        <HourlyTrend
-          hour={state.hour}
-          pollutant={state.pollutant}
-          series={series}
-          seriesLabel={selectedStation ? stationTitle(selectedStation) : "Promedio de estaciones"}
-          playing={state.playing}
-          onHour={setHour}
-          onPlaying={setPlaying}
+        <MapLegend
+          selection={
+            selectedStation
+              ? { radiusKm: SEARCH_RADIUS_KM, hasWind: wind.regions.length > 0 }
+              : null
+          }
+          municipalitySelected={municipality != null}
         />
         </div>
       </div>
     </div>
   )
+}
+
+const SOURCE_LIST_LIMIT = 4
+
+function StatusCounts({ counts }: { counts: { sancionada: number; seguimiento: number } }) {
+  return (
+    <p className="status-counts">
+      <span>
+        <IndustryIcon style={INDUSTRY_STATUS_STYLE.sancionada} />
+        {counts.sancionada} {counts.sancionada === 1 ? "sancionada" : "sancionadas"}
+      </span>
+      <span>
+        <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} />
+        {counts.seguimiento} en seguimiento
+      </span>
+      <StatusTip />
+    </p>
+  )
+}
+
+function topSources(list: readonly Industry[]): {
+  top: Array<{ key: string; label: string; count: number }>
+  rest: number
+} {
+  const groups = new Map<string, { key: string; label: string; count: number }>()
+  for (const industry of list) {
+    const key = emissionSourceKey(industry.sourceRaw)
+    const group = groups.get(key) ?? { key, label: emissionSourceLabel(industry.sourceRaw), count: 0 }
+    group.count += 1
+    groups.set(key, group)
+  }
+  const sorted = [...groups.values()].sort(
+    (left, right) => right.count - left.count || left.label.localeCompare(right.label, "es"),
+  )
+  return { top: sorted.slice(0, SOURCE_LIST_LIMIT), rest: Math.max(0, sorted.length - SOURCE_LIST_LIMIT) }
+}
+
+function municipalitySubtitle(municipality: MunicipalityRef): string {
+  if (municipality.key === "bogota") return "Distrito Capital · incluye todas sus localidades"
+  return `Municipio de ${formatPlace(municipality.department)}`
+}
+
+function monthCursor(ref: MonthRef): number {
+  return ref.year * 12 + ref.month
+}
+
+function monthName(ref: MonthRef): string {
+  return `${MONTHS[ref.month].toLocaleLowerCase("es")} de ${ref.year}`
+}
+
+// "Entre junio y diciembre de 2024", "Entre junio de 2024 y febrero de 2025" o "En junio de 2024".
+function gapName(fromCursor: number, toCursor: number): string {
+  const from = { year: Math.floor(fromCursor / 12), month: fromCursor % 12 }
+  const to = { year: Math.floor(toCursor / 12), month: toCursor % 12 }
+  if (fromCursor === toCursor) return `En ${monthName(from)}`
+  if (from.year === to.year) return `Entre ${MONTHS[from.month].toLocaleLowerCase("es")} y ${monthName(to)}`
+  return `Entre ${monthName(from)} y ${monthName(to)}`
+}
+
+function calendarNavText(
+  observationsState: "loading" | "ready" | "error",
+  current: MonthRef,
+  previous: MonthRef | null,
+  next: MonthRef | null,
+): { previous: string; next: string; notice: string | null } {
+  if (observationsState !== "ready") {
+    const waiting = observationsState === "loading" ? "Cargando los meses con datos" : "No se pudieron leer los meses con datos"
+    return { previous: waiting, next: waiting, notice: null }
+  }
+  const cursor = monthCursor(current)
+  const notices: string[] = []
+  if (next && monthCursor(next) > cursor + 1) {
+    notices.push(
+      `${gapName(cursor + 1, monthCursor(next) - 1)} las estaciones no tienen registros, así que el siguiente mes es ${monthName(next)}.`,
+    )
+  }
+  if (previous && monthCursor(previous) < cursor - 1) {
+    notices.push(
+      `${gapName(monthCursor(previous) + 1, cursor - 1)} las estaciones no tienen registros, así que el mes anterior es ${monthName(previous)}.`,
+    )
+  }
+  return {
+    previous: previous
+      ? `Ir a ${monthName(previous)}`
+      : `Las estaciones no tienen registros antes de ${monthName(current)}`,
+    next: next
+      ? `Ir a ${monthName(next)}`
+      : `Las estaciones no tienen registros después de ${monthName(current)}`,
+    notice: notices.length > 0 ? notices.join(" ") : null,
+  }
 }
 
 function monthDayLevels(

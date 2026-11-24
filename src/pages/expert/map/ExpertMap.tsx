@@ -20,7 +20,8 @@ import "leaflet/dist/leaflet.css"
 import { boyacaMunicipalities, municipalities } from "../../../data/municipalities"
 import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../../domain/industry"
 import { stationPlace, stationStatusLabel, stationTitle, type Station } from "../../../domain/station"
-import { FACTORY_PATH, STATUS_FILL, industryMarkerHtml } from "../../../layouts/map/industryMarkers"
+import { IndustryIcon } from "../../../layouts/map/IndustryIcon"
+import { INDUSTRY_STATUS_STYLE, industryMarkerHtml, type MarkerStyle } from "../../../layouts/map/industryMarkers"
 import { attachSmoothWheel, flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
 import type { GeoBox } from "../domain/geoBox"
 import { ICA_LEVELS } from "../domain/icaLevels"
@@ -43,15 +44,15 @@ const BRUSH_COLOR = "#1a4dd9"
 const NEUTRAL_FILL = "#ffffff"
 
 const ICONS = {
-  sancionada: industryIcon(STATUS_FILL.sancionada, false),
-  seguimiento: industryIcon(STATUS_FILL.seguimiento, false),
-  tramite: industryIcon(STATUS_FILL.tramite, false),
+  sancionada: industryIcon(INDUSTRY_STATUS_STYLE.sancionada, false),
+  seguimiento: industryIcon(INDUSTRY_STATUS_STYLE.seguimiento, false),
+  tramite: industryIcon(INDUSTRY_STATUS_STYLE.tramite, false),
 }
 
 const DIMMED_ICONS = {
-  sancionada: industryIcon(STATUS_FILL.sancionada, true),
-  seguimiento: industryIcon(STATUS_FILL.seguimiento, true),
-  tramite: industryIcon(STATUS_FILL.tramite, true),
+  sancionada: industryIcon(INDUSTRY_STATUS_STYLE.sancionada, true),
+  seguimiento: industryIcon(INDUSTRY_STATUS_STYLE.seguimiento, true),
+  tramite: industryIcon(INDUSTRY_STATUS_STYLE.tramite, true),
 }
 
 const HANDLE_ICON = divIcon({ className: "brush-handle", iconSize: [10, 10], iconAnchor: [5, 5] })
@@ -393,11 +394,11 @@ export function ExpertMap({
                 <span className="station-dot" /> Estación
               </span>
               <span>
-                <IndustryIcon fill={STATUS_FILL.seguimiento} />
+                <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} />
                 <span className="symbol-caption">Industria en seguimiento o trámite</span>
               </span>
               <span>
-                <IndustryIcon fill={STATUS_FILL.sancionada} />
+                <IndustryIcon style={INDUSTRY_STATUS_STYLE.sancionada} />
                 <span className="symbol-caption">Industria sancionada</span>
               </span>
             </div>
@@ -439,12 +440,12 @@ function isPath(layer: unknown): layer is Path {
   return typeof layer === "object" && layer !== null && "setStyle" in layer
 }
 
-function industryIcon(fill: string, dimmed: boolean) {
+function industryIcon(style: MarkerStyle, dimmed: boolean) {
   return divIcon({
     className: dimmed ? "industry-marker is-dimmed" : "industry-marker",
     iconSize: [18, 18],
     iconAnchor: [9, 9],
-    html: industryMarkerHtml(fill),
+    html: industryMarkerHtml(style),
   })
 }
 
@@ -466,10 +467,3 @@ function escapeHtml(value: string) {
     .replaceAll('"', "&quot;")
 }
 
-function IndustryIcon({ fill }: { fill: string }) {
-  return (
-    <svg className="industry-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-      <path fill={fill} fillRule="evenodd" d={FACTORY_PATH} />
-    </svg>
-  )
-}

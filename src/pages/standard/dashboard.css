@@ -322,6 +322,16 @@ select:focus-visible {
   padding: 0;
 }
 
+.calendar-notice {
+  margin: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .calendar-body {
   display: flex;
   flex-direction: column;
@@ -629,6 +639,11 @@ select:focus-visible {
   box-shadow: inset 0 0 0 1.5px #6e857a;
 }
 
+.territory-swatch.is-selected {
+  background: rgba(26, 60, 50, 0.32);
+  box-shadow: inset 0 0 0 2.5px #1a3c32;
+}
+
 .territory-swatch.is-boyaca {
   background: rgba(196, 165, 116, 0.85);
   box-shadow: inset 0 0 0 1.5px #8a6232;
@@ -741,6 +756,24 @@ select:focus-visible {
 
 .station-body p + p {
   margin-top: 8px;
+}
+
+.station-body .status-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-counts > span:not(.pollutant-tip) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 .station-coords,
@@ -1024,10 +1057,10 @@ select:focus-visible {
 .dashboard.is-map-stage {
   --stage-edge: 16px;
   --stage-gap: 12px;
-  --rail-width: 300px;
+  --rail-width: 320px;
   --detail-width: 400px;
-  --trend-height: 308px;
-  --map-pad-left: 344px;
+  --trend-height: 224px;
+  --map-pad-left: 364px;
   --map-pad-right: 444px;
   --map-pad-top: 48px;
   --map-pad-bottom: 56px;
@@ -1143,22 +1176,28 @@ select:focus-visible {
   min-height: 0;
 }
 
-.dashboard.is-map-stage .insight-column .station-panel,
-.dashboard.is-map-stage .insight-column .trend-card {
+/* La estación cede alto y hace scroll; la leyenda queda siempre visible debajo. */
+.dashboard.is-map-stage .insight-column .station-panel {
   position: relative;
+  flex: 0 1 auto;
   width: auto;
   min-height: 0;
-}
-
-.dashboard.is-map-stage .insight-column .station-panel {
-  flex: 0 1 auto;
-  max-height: calc(100vh - var(--stage-edge) * 2 - var(--trend-height) - var(--stage-gap));
   overflow: auto;
 }
 
-.dashboard.is-map-stage .insight-column .trend-card {
-  flex: 0 0 var(--trend-height);
+/* La hora vive junto al día: la gráfica horaria va en el panel izquierdo, debajo del calendario. */
+.dashboard.is-map-stage .control-panel .trend-card {
+  flex: none;
   height: var(--trend-height);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dashboard.is-map-stage .control-panel .trend-header {
+  padding: 10px 16px 8px;
 }
 
 .dashboard.is-map-stage .station-body {
@@ -1182,16 +1221,16 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.dashboard.is-map-stage .control-panel .map-legend {
+.dashboard.is-map-stage .insight-column .map-legend {
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: 0;
   padding: 0 16px 14px;
-  background: transparent;
-  border: 0;
-  border-top: 1px solid var(--line);
-  border-radius: 0;
-  box-shadow: none;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(26, 36, 32, 0.06), 0 10px 28px rgba(26, 36, 32, 0.12);
 }
 
 .map-legend .legend-block + .legend-block {
@@ -1228,10 +1267,44 @@ select:focus-visible {
   padding: 0;
 }
 
-.map-legend .legend-items {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.map-legend .legend-items,
+.map-legend .level-scale {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.map-legend .legend-items.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.map-legend .legend-items li > :first-child,
+.map-legend .level-scale li > :first-child {
+  flex: none;
+}
+
+.station-dot.is-ica {
+  background: conic-gradient(#00e400 0 33%, #ffff00 0 66%, #ff7e00 0);
+}
+
+.map-legend .level-scale i.is-no-reading {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 2px #1a3c32;
+}
+
+.radius-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1.25px dashed #1a4dd9;
+  border-radius: 50%;
+}
+
+.wind-swatch {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #1a4dd9;
+  border-radius: 0 12px 0 0;
+  background: rgba(26, 77, 217, 0.34);
 }
 
 .map-legend .legend-items li,
@@ -1241,12 +1314,6 @@ select:focus-visible {
   gap: 8px;
   font-size: 13px;
   line-height: 1.3;
-}
-
-.map-legend .level-scale {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
 
 .map-legend .level-scale li {
@@ -1261,7 +1328,7 @@ select:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(26, 36, 32, 0.22);
 }
 
-.dashboard.is-map-stage .control-panel .map-legend .legend-block {
+.dashboard.is-map-stage .insight-column .map-legend .legend-block {
   padding-top: 12px;
 }
 
@@ -1278,9 +1345,9 @@ select:focus-visible {
 
 @media (max-width: 1360px) {
   .dashboard.is-map-stage {
-    --rail-width: 280px;
+    --rail-width: 300px;
     --detail-width: 360px;
-    --map-pad-left: 324px;
+    --map-pad-left: 344px;
     --map-pad-right: 404px;
   }
 }
@@ -1322,8 +1389,7 @@ select:focus-visible {
     margin: 12px 16px 0;
   }
 
-  .dashboard.is-map-stage .insight-column .station-panel,
-  .dashboard.is-map-stage .insight-column .trend-card {
+  .dashboard.is-map-stage .insight-column .station-panel {
     max-height: none;
     margin: 0;
   }
@@ -1336,8 +1402,8 @@ select:focus-visible {
     position: static;
   }
 
-  .dashboard.is-map-stage .insight-column .trend-card {
-    min-height: 240px;
+  .dashboard.is-map-stage .control-panel .trend-card {
+    height: 260px;
   }
 
   .dashboard.is-map-stage .insight-column {

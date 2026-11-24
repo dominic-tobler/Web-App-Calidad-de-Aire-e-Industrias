@@ -3,7 +3,10 @@ import {
   circle,
   circleMarker,
   divIcon,
+  DomEvent,
   geoJSON,
+  type GeoJSON,
+  type PathOptions,
   latLngBounds,
   type LatLngBounds,
   layerGroup,
@@ -28,7 +31,14 @@ import {
 import { ICA_UNCLASSIFIED } from "../../domain/icaLevels"
 import { LevelTip } from "../PollutantTip"
 
-import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../domain/industry"
+import {
+  formatPlace,
+  industryMunicipalityKey,
+  municipalityKey,
+  placeWithDepartment,
+  statusLabel,
+  type Industry,
+} from "../../domain/industry"
 import { destination, WIND_SECTOR_DEG, WIND_SECTORS, type WindRegion } from "../../domain/wind"
 import {
   stationPlace,
@@ -37,7 +47,8 @@ import {
   type Station,
   type StationLink,
 } from "../../domain/station"
-import { FACTORY_PATH, STATUS_FILL, industryMarkerHtml } from "./industryMarkers"
+import { INDUSTRY_STATUS_STYLE, industryMarkerHtml, type MarkerStyle } from "./industryMarkers"
+import { IndustryIcon } from "./IndustryIcon"
 import { attachSmoothWheel, flyZoom, glideToBounds, smoothMapOptions } from "./smoothMap"
 
 type CundinamarcaMapProps = {
@@ -52,15 +63,26 @@ type CundinamarcaMapProps = {
   readings: Record<string, number>
   showHourBadge?: boolean
   onSelectStation: (id: string | null) => void
+  // Municipio elegido (clave de municipalityKey). Con él, el mapa lo resalta, se acerca y
+  // atenúa las industrias de otros municipios.
+  selectedMunicipalityKey?: string | null
+  onSelectMunicipality?: (municipality: MunicipalityRef | null) => void
 }
+
+export type MunicipalityRef = { key: string; name: string; department: string }
 
 const REGION_OPACITY = [0.34, 0.24, 0.16]
 
+const INDUSTRY_ICON_SIZE = 18
+
 const ICONS = {
-  sancionada: industryIcon(STATUS_FILL.sancionada),
-  seguimiento: industryIcon(STATUS_FILL.seguimiento),
-  tramite: industryIcon(STATUS_FILL.tramite),
+  sancionada: industryIcon(INDUSTRY_STATUS_STYLE.sancionada),
+  seguimiento: industryIcon(INDUSTRY_STATUS_STYLE.seguimiento),
+  tramite: industryIcon(INDUSTRY_STATUS_STYLE.tramite),
 }
+
+// Opacidad de las industrias que quedan fuera de la zona marcada al elegir una estación.
+const OUTSIDER_OPACITY = 0.28
 
 export function CundinamarcaMap({
   industries,
@@ -74,25 +96,33 @@ export function CundinamarcaMap({
   readings,
   showHourBadge = false,
   onSelectStation,
+  selectedMunicipalityKey = null,
+  onSelectMunicipality,
 }: CundinamarcaMapProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LeafletMap | null>(null)
   const industriesLayerRef = useRef<LayerGroup | null>(null)
   const radiusLayerRef = useRef<LayerGroup | null>(null)
   const stationsLayerRef = useRef<LayerGroup | null>(null)
+  const territoryLayersRef = useRef<GeoJSON[]>([])
+  const municipalityLayersRef = useRef(new Map<string, Path & { getBounds(): LatLngBounds }>())
   const overviewBoundsRef = useRef<LatLngBounds | null>(null)
   const hadSelectionRef = useRef(false)
   const selectStationRef = useRef(onSelectStation)
+  const selectMunicipalityRef = useRef(onSelectMunicipality)
+  const selectedMunicipalityRef = useRef(selectedMunicipalityKey)
   const [municipality, setMunicipality] = useState<string | null>(null)
 
   useEffect(() => {
     selectStationRef.current = onSelectStation
-  }, [onSelectStation])
+    selectMunicipalityRef.current = onSelectMunicipality
+  }, [onSelectStation, onSelectMunicipality])
 
   useEffect(() => {
     const host = hostRef.current
     if (!host || mapRef.current) return
 
+    const municipalityLayers = municipalityLayersRef.current
     const map = createMap(host, {
       zoomControl: false,
       ...smoothMapOptions,
@@ -112,42 +142,41 @@ export function CundinamarcaMap({
       },
     ).addTo(map)
 
-    const boyaca = geoJSON(boyacaMunicipalities, {
-      style: BOYACA_STYLE,
-      onEachFeature(feature, layer) {
-        const name = feature.properties?.name
-        if (!name || !isPath(layer)) return
-        layer.on("mouseover", () => {
-          layer.setStyle({ fillOpacity: 0.55, weight: 1.8, color: "#6e4a24" })
-          setMunicipality(placeWithDepartment(name, feature.properties?.department))
-        })
-        layer.on("mouseout", () => {
-          boyaca.resetStyle(layer)
-          setMunicipality(null)
-        })
-      },
-    }).addTo(map)
+    const territory = (
+      data: typeof municipalities,
+      styles: { base: PathOptions; hover: PathOptions; selected: PathOptions },
+    ) => {
+      const keyOf = (feature?: { properties?: { name?: string; department?: string } }) =>
+        municipalityKey(feature?.properties?.department ?? "", feature?.properties?.name ?? "")
+      const group: GeoJSON = geoJSON(data, {
+        style: (feature) => (keyOf(feature) === selectedMunicipalityRef.current ? styles.selected : styles.base),
+        onEachFeature(feature, layer) {
+          const name = feature.properties?.name
+          if (!name || !isPath(layer)) return
+          const key = keyOf(feature)
+          const department = feature.properties?.department ?? ""
+          municipalityLayers.set(key, layer as Path & { getBounds(): LatLngBounds })
+          layer.on("mouseover", () => {
+            if (key !== selectedMunicipalityRef.current) layer.setStyle(styles.hover)
+            setMunicipality(placeWithDepartment(name, department))
+          })
+          layer.on("mouseout", () => {
+            group.resetStyle(layer)
+            setMunicipality(null)
+          })
+          layer.on("click", (event) => {
+            // Sin esto el clic llega al mapa, que lo toma como "quitar la selección".
+            DomEvent.stopPropagation(event)
+            selectMunicipalityRef.current?.({ key, name, department })
+          })
+        },
+      }).addTo(map)
+      territoryLayersRef.current.push(group)
+      return group
+    }
 
-    const boundaries = geoJSON(municipalities, {
-      style: {
-        color: "#6e857a",
-        weight: 1,
-        fillColor: "#1a3c32",
-        fillOpacity: 0.12,
-      },
-      onEachFeature(feature, layer) {
-        const name = feature.properties?.name
-        if (!name || !isPath(layer)) return
-        layer.on("mouseover", () => {
-          layer.setStyle({ fillOpacity: 0.28, weight: 1.8, color: "#1a3c32" })
-          setMunicipality(placeWithDepartment(name, feature.properties?.department))
-        })
-        layer.on("mouseout", () => {
-          boundaries.resetStyle(layer)
-          setMunicipality(null)
-        })
-      },
-    }).addTo(map)
+    const boyaca = territory(boyacaMunicipalities, BOYACA_STYLES)
+    const boundaries = territory(municipalities, CUNDINAMARCA_STYLES)
 
     const bounds = boundaries.getBounds().pad(0)
     bounds.extend(boyaca.getBounds())
@@ -169,7 +198,10 @@ export function CundinamarcaMap({
     radiusLayerRef.current = layerGroup().addTo(map)
     industriesLayerRef.current = layerGroup().addTo(map)
     stationsLayerRef.current = layerGroup().addTo(map)
-    map.on("click", () => selectStationRef.current(null))
+    map.on("click", () => {
+      selectStationRef.current(null)
+      selectMunicipalityRef.current?.(null)
+    })
     const detachWheel = attachSmoothWheel(map)
     mapRef.current = map
 
@@ -198,8 +230,17 @@ export function CundinamarcaMap({
       industriesLayerRef.current = null
       radiusLayerRef.current = null
       stationsLayerRef.current = null
+      territoryLayersRef.current = []
+      municipalityLayers.clear()
     }
   }, [stations])
+
+  // Resalta el municipio elegido. resetStyle vuelve a evaluar el estilo de cada polígono.
+  useEffect(() => {
+    selectedMunicipalityRef.current = selectedMunicipalityKey
+    for (const group of territoryLayersRef.current) group.resetStyle()
+    if (selectedMunicipalityKey) municipalityLayersRef.current.get(selectedMunicipalityKey)?.bringToFront()
+  }, [selectedMunicipalityKey])
 
   useEffect(() => {
     const layer = industriesLayerRef.current
@@ -207,12 +248,16 @@ export function CundinamarcaMap({
 
     layer.clearLayers()
     const linked = new Set(links.map((link) => link.industry.id))
-    const dimOutsiders = selectedStationId != null
+    const isOutsider = (industry: Industry) => {
+      if (selectedStationId != null) return !linked.has(industry.id)
+      if (selectedMunicipalityKey != null) return industryMunicipalityKey(industry) !== selectedMunicipalityKey
+      return false
+    }
     for (const industry of industries) {
       marker([industry.latitude, industry.longitude], {
         pane: "industries",
         icon: ICONS[industry.status],
-        opacity: dimOutsiders && !linked.has(industry.id) ? 0.28 : 1,
+        opacity: isOutsider(industry) ? OUTSIDER_OPACITY : 1,
         title: placeWithDepartment(industry.municipality, industry.department),
         keyboard: true,
       })
@@ -224,7 +269,7 @@ export function CundinamarcaMap({
         })
         .addTo(layer)
     }
-  }, [industries, links, selectedStationId])
+  }, [industries, links, selectedMunicipalityKey, selectedStationId])
 
   useEffect(() => {
     const layer = radiusLayerRef.current
@@ -304,6 +349,19 @@ export function CundinamarcaMap({
       return
     }
 
+    const municipalityLayer = selectedMunicipalityKey
+      ? municipalityLayersRef.current.get(selectedMunicipalityKey)
+      : undefined
+    if (!station && municipalityLayer) {
+      glideToBounds(map, municipalityLayer.getBounds(), {
+        ...padding,
+        maxZoom: 12,
+        duration: 1.2,
+      })
+      hadSelectionRef.current = true
+      return
+    }
+
     if (hadSelectionRef.current && overviewBoundsRef.current) {
       glideToBounds(map, overviewBoundsRef.current, {
         ...padding,
@@ -311,7 +369,7 @@ export function CundinamarcaMap({
       })
       hadSelectionRef.current = false
     }
-  }, [links, searchRadiusKm, selectedStationId, stations])
+  }, [links, searchRadiusKm, selectedMunicipalityKey, selectedStationId, stations])
 
   useEffect(() => {
     const layer = stationsLayerRef.current
@@ -398,39 +456,20 @@ export function CundinamarcaMap({
   )
 }
 
-export function MapLegend() {
+type MapLegendProps = {
+  // Solo con una estación elegida: explica el radio, los lados del viento y las industrias atenuadas.
+  selection?: { radiusKm: number; hasWind: boolean } | null
+  // Con un municipio elegido: explica el resaltado y las industrias atenuadas.
+  municipalitySelected?: boolean
+}
+
+export function MapLegend({ selection = null, municipalitySelected = false }: MapLegendProps) {
   return (
     <section className="map-legend" aria-label="Leyenda del mapa">
       <div className="legend-block">
-        <h2>Capas del mapa</h2>
-        <ul className="legend-items">
-          <li>
-            <span className="territory-swatch is-cundinamarca" />
-            Cundinamarca
-          </li>
-          <li>
-            <span className="territory-swatch is-boyaca" />
-            Boyacá
-          </li>
-          <li>
-            <span className="station-dot" />
-            Estación
-          </li>
-          <li>
-            <IndustryIcon fill={STATUS_FILL.seguimiento} />
-            Industria en seguimiento
-          </li>
-          <li>
-            <IndustryIcon fill={STATUS_FILL.sancionada} />
-            Industria sancionada
-          </li>
-        </ul>
-      </div>
-      <div className="legend-block">
         <h2>Calidad del aire (ICA)</h2>
         <p>
-          En el calendario, el color es el promedio del día. En el mapa, es la lectura de cada estación
-          a la hora elegida. El gris es una medición que el ICA no clasifica. <LevelTip />
+          Estaciones: lectura a la hora elegida. Calendario: promedio del día. <LevelTip />
         </p>
         <ul className="level-scale" aria-label="Colores del Índice de calidad del aire">
           {AIR_QUALITY_LEVELS.map((level) => (
@@ -439,8 +478,77 @@ export function MapLegend() {
               {level.label}
             </li>
           ))}
+          <li title="Hay medición, pero el ICA no clasifica este valor">
+            <i style={{ background: ICA_UNCLASSIFIED }} />
+            Sin categoría ICA
+          </li>
+          <li title="La estación no midió a esta hora">
+            <i className="is-no-reading" />
+            Sin medición
+          </li>
         </ul>
       </div>
+      <div className="legend-block">
+        <h2>Capas del mapa</h2>
+        <ul className="legend-items">
+          <li>
+            <span className="station-dot is-ica" />
+            Estación
+          </li>
+          <li>
+            <IndustryIcon style={INDUSTRY_STATUS_STYLE.sancionada} />
+            Industria sancionada
+          </li>
+          <li>
+            <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} />
+            Industria en seguimiento
+          </li>
+          <li>
+            <span className="territory-swatch is-cundinamarca" />
+            Cundinamarca
+          </li>
+          <li>
+            <span className="territory-swatch is-boyaca" />
+            Boyacá
+          </li>
+        </ul>
+      </div>
+      {selection && (
+        <div className="legend-block">
+          <h2>Estación elegida</h2>
+          <ul className="legend-items is-single">
+            <li>
+              <span className="radius-swatch" />
+              Radio de búsqueda de {selection.radiusKm} km
+            </li>
+            {selection.hasWind && (
+              <li>
+                <span className="wind-swatch" />
+                Lados de donde vino el viento. Más intenso, más horas
+              </li>
+            )}
+            <li>
+              <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} opacity={OUTSIDER_OPACITY} />
+              {selection.hasWind ? "Industria fuera de esos lados" : "Industria fuera del radio"}
+            </li>
+          </ul>
+        </div>
+      )}
+      {!selection && municipalitySelected && (
+        <div className="legend-block">
+          <h2>Municipio elegido</h2>
+          <ul className="legend-items is-single">
+            <li>
+              <span className="territory-swatch is-selected" />
+              Borde marcado: el municipio elegido
+            </li>
+            <li>
+              <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} opacity={OUTSIDER_OPACITY} />
+              Industria de otro municipio
+            </li>
+          </ul>
+        </div>
+      )}
     </section>
   )
 }
@@ -464,23 +572,28 @@ function overlayPadding(host: HTMLElement) {
   }
 }
 
-const BOYACA_STYLE = {
-  color: "#8a6232",
-  weight: 1.25,
-  fillColor: "#c4a574",
-  fillOpacity: 0.4,
+const CUNDINAMARCA_STYLES: { base: PathOptions; hover: PathOptions; selected: PathOptions } = {
+  base: { color: "#6e857a", weight: 1, fillColor: "#1a3c32", fillOpacity: 0.12 },
+  hover: { color: "#1a3c32", weight: 1.8, fillColor: "#1a3c32", fillOpacity: 0.28 },
+  selected: { color: "#1a3c32", weight: 2.5, fillColor: "#1a3c32", fillOpacity: 0.32 },
+}
+
+const BOYACA_STYLES: { base: PathOptions; hover: PathOptions; selected: PathOptions } = {
+  base: { color: "#8a6232", weight: 1.25, fillColor: "#c4a574", fillOpacity: 0.4 },
+  hover: { color: "#6e4a24", weight: 1.8, fillColor: "#c4a574", fillOpacity: 0.55 },
+  selected: { color: "#6e4a24", weight: 2.5, fillColor: "#c4a574", fillOpacity: 0.62 },
 }
 
 function isPath(layer: unknown): layer is Path {
   return typeof layer === "object" && layer !== null && "setStyle" in layer
 }
 
-function industryIcon(fill: string) {
+function industryIcon(style: MarkerStyle) {
   return divIcon({
     className: "industry-marker",
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    html: industryMarkerHtml(fill),
+    iconSize: [INDUSTRY_ICON_SIZE, INDUSTRY_ICON_SIZE],
+    iconAnchor: [INDUSTRY_ICON_SIZE / 2, INDUSTRY_ICON_SIZE / 2],
+    html: industryMarkerHtml(style, INDUSTRY_ICON_SIZE),
   })
 }
 
@@ -511,12 +624,4 @@ function escapeHtml(value: string) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
-}
-
-function IndustryIcon({ fill }: { fill: string }) {
-  return (
-    <svg className="industry-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-      <path fill={fill} fillRule="evenodd" d={FACTORY_PATH} />
-    </svg>
-  )
 }

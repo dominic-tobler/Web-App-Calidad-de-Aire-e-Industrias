@@ -103,6 +103,35 @@ function plainKey(value: string): string {
     .toLowerCase()
 }
 
+// Nombres de industries.json que no coinciden con el polígono del mapa.
+const MUNICIPALITY_ALIASES: Record<string, string> = {
+  ubate: "villa de san diego de ubate",
+}
+
+// Clave común entre los polígonos del mapa y el municipio de cada industria.
+// Las localidades del Distrito Capital caen todas en el polígono de Bogotá.
+export function municipalityKey(department: string, name: string): string {
+  const dept = plainKey(department).trim()
+  if (dept === "distrito capital" || dept.startsWith("bogota")) return "bogota"
+  const place = plainKey(name).trim()
+  return `${dept}|${MUNICIPALITY_ALIASES[place] ?? place}`
+}
+
+export function industryMunicipalityKey(industry: Pick<Industry, "department" | "municipality">): string {
+  return municipalityKey(industry.department, industry.municipality)
+}
+
+// Cuántas sancionadas y cuántas en seguimiento hay en la lista (las de trámite no se muestran en la vista común).
+export function countByStatus(list: readonly Pick<Industry, "status">[]): { sancionada: number; seguimiento: number } {
+  const counts = { sancionada: 0, seguimiento: 0 }
+  for (const industry of list) {
+    if (industry.status === "sancionada") counts.sancionada += 1
+    else if (industry.status === "seguimiento") counts.seguimiento += 1
+  }
+  return counts
+}
+
+
 // Clave del filtro de fuente: el texto de TipoFuenteEmision, sin agrupar.
 export function emissionSourceKey(raw: string): string {
   const value = raw.trim()
