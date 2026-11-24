@@ -1,16 +1,17 @@
-import { createBrowserRouter, Link, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Link, Navigate, RouterProvider } from 'react-router-dom';
 import LandingPage from './pages/landingpage/LandingPage'
 import { CommonStateProvider } from './state/commonState'
 import { ExpertShell } from './pages/expert/ExpertShell';
 import { CommonDashboard } from './pages/standard/CommonDashboard';
+import { ROUTES } from './layouts/ViewNav';
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: ROUTES.inicio,
     element: (
       <LandingPage
-        standardHref="/standard"
-        expertHref="/expert"
+        standardHref={ROUTES.estandar}
+        expertHref={ROUTES.experta}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -19,8 +20,11 @@ const router = createBrowserRouter([
       />
     ),
   },
-  { path: "/standard", element: <CommonDashboard /> },
-  { path: "/expert", element: <ExpertShell /> },
+  { path: ROUTES.estandar, element: <CommonDashboard /> },
+  { path: ROUTES.experta, element: <ExpertShell /> },
+  // Rutas antiguas, por si alguien las guardó.
+  { path: "/standard", element: <Navigate to={ROUTES.estandar} replace /> },
+  { path: "/expert", element: <Navigate to={ROUTES.experta} replace /> },
 ]);
 
 function App() {

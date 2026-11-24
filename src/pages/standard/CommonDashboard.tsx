@@ -36,6 +36,7 @@ import { CundinamarcaMap, MapLegend } from "../../layouts/map/CundinamarcaMap"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
 import { EmissionFilters } from "../../layouts/EmissionFilters"
+import { ViewNav } from "../../layouts/ViewNav"
 import "./dashboard.css"
 
 const NEARBY_LIST_LIMIT = 6
@@ -160,6 +161,7 @@ export function CommonDashboard() {
 
         <aside className="control-panel">
           <header className="dashboard-header">
+            <ViewNav current="estandar" />
             <h1>Calidad del aire en Cundinamarca</h1>
             <p className="header-context">
               {observationsState === "loading"

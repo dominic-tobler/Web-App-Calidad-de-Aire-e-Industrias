@@ -3,7 +3,9 @@ import * as d3 from "d3"
 import { industries } from "../../data/industries"
 import { stations } from "../../data/stations"
 import { formatReading } from "../../domain/airQuality"
-import { COLOMBIA_TIME_LABEL } from "../../domain/time"
+import { COLOMBIA_TIME_LABEL, type Year } from "../../domain/time"
+import { ViewNav } from "../../layouts/ViewNav"
+import { useCommonState } from "../../state/commonState"
 import { SOURCE_OPTIONS, statusLabel } from "../../domain/industry"
 import type { Station } from "../../domain/station"
 import { CategoryBars, type BarGroup } from "./charts/CategoryBars"
@@ -68,14 +70,17 @@ type LoadState =
   | { status: "error"; message: string }
 
 export function ExpertDashboard() {
+  const { state: common, setDate, setHour } = useCommonState()
+  // Al llegar desde la vista estándar se parte de su día, hora, contaminante y estación.
+  const [initial] = useState(() => initialFromCommon(common))
   const [load, setLoad] = useState<LoadState>({ status: "loading" })
-  const [periodId, setPeriodId] = useState<PeriodId>("2024")
-  const [dateFrom, setDateFrom] = useState("2024-01-01")
-  const [dateTo, setDateTo] = useState("2024-01-31")
-  const [pickedHour, setPickedHour] = useState<number | null>(null)
+  const [periodId, setPeriodId] = useState<PeriodId>(initial.periodId)
+  const [dateFrom, setDateFrom] = useState(initial.dateFrom)
+  const [dateTo, setDateTo] = useState(initial.dateTo)
+  const [pickedHour, setPickedHour] = useState<number | null>(initial.pickedHour)
   const [status, setStatus] = useState<StatusFilter>("todas")
-  const [selection, setSelection] = useState<GeoBox | null>(INITIAL_SELECTION)
-  const [variable, setVariable] = useState<VariableId>("pm25")
+  const [selection, setSelection] = useState<GeoBox | null>(initial.selection)
+  const [variable, setVariable] = useState<VariableId>(initial.variable)
   // Lunes de la semana elegida para las matrices; si deja de estar en el rango del mapa,
   // se usa la primera semana disponible.
   const [corrWeek, setCorrWeek] = useState<string | null>(null)
@@ -288,9 +293,18 @@ export function ExpertDashboard() {
       ? ""
       : (STATUS_OPTIONS.find((option) => option.id === status)?.label.toLocaleLowerCase("es") ?? "")
 
+  // La vista estándar abre en el día y la hora que se ven en el mapa de esta vista.
+  function syncToCommon() {
+    const iso = hourToIsoDate(mapHour)
+    const [year, month, day] = iso.split("-").map(Number)
+    setDate(year as Year, month - 1, day)
+    setHour(mapHour - dayStartHour(iso))
+  }
+
   return (
     <div className="dashboard expert">
       <header className="dashboard-header expert-header">
+        <ViewNav current="experta" className="is-bare" onLeave={syncToCommon} />
         <h1>Calidad del aire en Cundinamarca</h1>
         <p className="header-context">
           Vista experta · {formatDay(timeWindow.startHour)} – {formatDay(timeWindow.endHour)} · Mapa:{" "}
@@ -496,6 +510,57 @@ export function ExpertDashboard() {
       </div>
     </div>
   )
+}
+
+type CommonState = ReturnType<typeof useCommonState>["state"]
+
+// Margen en grados alrededor de una estación que queda fuera del recuadro inicial.
+const STATION_BOX_MARGIN = 0.15
+
+function initialFromCommon(common: CommonState) {
+  const iso = isoDate(common.year, common.month + 1, common.day)
+  const period = PERIODS.find((option) => iso >= option.first && iso <= option.last)
+
+  const pollutant = String(common.pollutant)
+  const variable: VariableId = POLLUTANT_VARIABLES.find((item) => item.id === pollutant)?.id ?? "pm25"
+
+  const station = stations.find((item) => item.id === common.selectedStationId)
+  const selection: GeoBox =
+    station && !insideBox(INITIAL_SELECTION, station.latitude, station.longitude)
+      ? {
+          south: station.latitude - STATION_BOX_MARGIN,
+          north: station.latitude + STATION_BOX_MARGIN,
+          west: station.longitude - STATION_BOX_MARGIN,
+          east: station.longitude + STATION_BOX_MARGIN,
+        }
+      : INITIAL_SELECTION
+
+  // Fecha fuera de los periodos con datos: el rango por defecto de siempre.
+  if (!period) {
+    return {
+      periodId: "2024" as PeriodId,
+      dateFrom: "2024-01-01",
+      dateTo: "2024-01-31",
+      pickedHour: null,
+      selection,
+      variable,
+    }
+  }
+
+  // El mes completo del día elegido, recortado al periodo.
+  const lastDayOfMonth = new Date(Date.UTC(common.year, common.month + 1, 0)).getUTCDate()
+  return {
+    periodId: period.id,
+    dateFrom: clampToPeriod(isoDate(common.year, common.month + 1, 1), period),
+    dateTo: clampToPeriod(isoDate(common.year, common.month + 1, lastDayOfMonth), period),
+    pickedHour: dayStartHour(iso) + common.hour,
+    selection,
+    variable,
+  }
+}
+
+function isoDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
 
 function stationCountLabel(count: number): string {

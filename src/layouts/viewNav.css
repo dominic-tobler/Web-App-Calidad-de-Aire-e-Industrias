@@ -1,0 +1,69 @@
+.view-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.view-nav-home {
+  display: inline-flex;
+  text-decoration: none;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 8px;
+  color: #5f6b66;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.view-nav-home:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1d2b26;
+}
+
+/* Claro a propósito: no debe parecerse a las pestañas oscuras de la vista experta. */
+.view-nav-switch {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.view-nav-switch > * {
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: transparent;
+  color: #5f6b66;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.view-nav-switch > a:hover {
+  color: #1d2b26;
+}
+
+.view-nav-switch > .is-active {
+  background: #fff;
+  color: #1d2b26;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  cursor: default;
+}
+
+.view-nav-home:focus-visible,
+.view-nav-switch > a:focus-visible {
+  outline: 2px solid #2b4fd8;
+  outline-offset: 2px;
+}
+
+/* En la vista experta la barra va sobre el título, sin línea divisoria. */
+.view-nav.is-bare {
+  justify-content: flex-start;
+  gap: 16px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
