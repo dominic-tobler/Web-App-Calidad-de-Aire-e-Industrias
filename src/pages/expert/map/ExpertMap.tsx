@@ -25,6 +25,7 @@ import { INDUSTRY_STATUS_STYLE, industryMarkerHtml, type MarkerStyle } from "../
 import { attachSmoothWheel, flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
 import type { GeoBox } from "../domain/geoBox"
 import { ICA_LEVELS } from "../domain/icaLevels"
+import { sanctionCode } from "../domain/industryGroups"
 
 
 type ExpertMapProps = {
@@ -357,16 +358,25 @@ export function ExpertMap({
             −
           </button>
         </div>
-        <button
-          type="button"
-          className={brushing ? "brush-tool is-active" : "brush-tool"}
-          aria-pressed={brushing}
-          aria-label={brushing ? "Desactivar selección por recuadro" : "Activar selección por recuadro"}
-          title={brushing ? "Selección por recuadro activa (clic para mover el mapa)" : "Seleccionar con recuadro"}
-          onClick={() => setBrushing((current) => !current)}
-        >
-          <span />
-        </button>
+        <div className="brush-tool-wrap">
+          <button
+            type="button"
+            className={brushing ? "brush-tool is-active" : "brush-tool"}
+            aria-pressed={brushing}
+            aria-label={brushing ? "Desactivar selección por recuadro" : "Activar selección por recuadro"}
+            aria-describedby="brush-tool-tip"
+            onClick={() => setBrushing((current) => !current)}
+          >
+            <span className="brush-icon" aria-hidden="true" />
+            <span className="brush-caption">{brushing ? "Selección" : "Desplazar"}</span>
+          </button>
+          {/* Ayuda del modo: solo aparece al pasar el cursor o enfocar el botón. */}
+          <span id="brush-tool-tip" className="brush-tip" role="tooltip">
+            {brushing
+              ? "Modo selección: arrastra sobre el mapa para seleccionar estaciones e industrias. Un clic limpia la selección. Clic aquí para volver a mover el mapa."
+              : "Modo desplazamiento: arrastra para mover el mapa. Clic aquí para seleccionar con un recuadro."}
+          </span>
+        </div>
       </div>
 
       <div className="hour-badge">Hora del mapa · {hourLabel}</div>
@@ -375,11 +385,6 @@ export function ExpertMap({
 
       <div className="map-footer">
         <div className="expert-map-notes">
-          <p className="brush-hint">
-            {brushing
-              ? "Arrastra sobre el mapa para seleccionar estaciones e industrias cercanas. Un clic limpia la selección."
-              : "Modo desplazamiento. Activa el recuadro para seleccionar."}
-          </p>
           <div className="symbol-legend">
             <div className="territory-legend">
               <span>
@@ -454,7 +459,8 @@ function industryTooltip(industry: Industry) {
   const vereda = industry.vereda ? ` · ${escapeHtml(formatPlace(industry.vereda))}` : ""
   const detail =
     industry.status === "sancionada"
-      ? escapeHtml(industry.sanctionReason ?? "Sin razón registrada")
+      ? // Solo el código: el texto completo de cada código está en el cuadro bajo las barras.
+        `Código de sanción: ${escapeHtml(sanctionCode(industry))}`
       : `${escapeHtml(industry.sourceRaw || "Fuente sin tipo")} · ${escapeHtml(industry.fuel)}`
   return `<strong>${place}${vereda}</strong><span>${detail}</span><span>${escapeHtml(statusLabel(industry.status))} · Expediente ${industry.expediente}</span>`
 }

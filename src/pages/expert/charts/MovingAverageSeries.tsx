@@ -13,6 +13,8 @@ type MovingAverageSeriesProps = {
   endHour: number
   mapHour: number
   onMapHour: (hour: number) => void
+  /** Hora bajo el cursor (null al salir); el mapa la muestra mientras dura el hover. */
+  onHoverHour: (hour: number | null) => void
   emptyMessage: string
 }
 
@@ -26,6 +28,7 @@ export function MovingAverageSeries({
   endHour,
   mapHour,
   onMapHour,
+  onHoverHour,
   emptyMessage,
 }: MovingAverageSeriesProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -216,6 +219,14 @@ export function MovingAverageSeries({
         return Math.max(startHour, Math.min(endHour, hour))
       }
 
+      // Solo avisa al mapa cuando cambia la hora, no en cada píxel.
+      let lastHover: number | null = null
+      const hover = (hour: number | null) => {
+        if (hour === lastHover) return
+        lastHover = hour
+        onHoverHour(hour)
+      }
+
       plot
         .append("rect")
         .attr("width", innerWidth)
@@ -229,6 +240,7 @@ export function MovingAverageSeries({
         .on("pointermove", (event: PointerEvent) => {
           const [px] = d3.pointer(event)
           const hour = hourAt(px)
+          hover(hour)
           const offset = hour - startHour
           rule.attr("x1", x(hourToDate(hour))).attr("x2", x(hourToDate(hour))).attr("visibility", "visible")
           const rows = series
@@ -241,7 +253,7 @@ export function MovingAverageSeries({
                   row.value == null ? "—" : row.value.toLocaleString("es-CO", { maximumFractionDigits: 1 })
                 }</b></span>`,
             )
-            .join("")}<em>Clic: usar esta hora en el mapa</em>`
+            .join("")}<em>El mapa muestra esta hora · clic para fijarla</em>`
           tip.hidden = false
           const left = margin.left + px + 14
           tip.style.left = `${left + tip.offsetWidth > width ? margin.left + px - tip.offsetWidth - 14 : left}px`
@@ -250,14 +262,18 @@ export function MovingAverageSeries({
         .on("pointerleave", () => {
           rule.attr("visibility", "hidden")
           tip.hidden = true
+          hover(null)
         })
     }
 
     draw()
     const observer = new ResizeObserver(draw)
     observer.observe(wrap)
-    return () => observer.disconnect()
-  }, [colors, emptyMessage, endHour, mapHour, onMapHour, series, startHour, variable])
+    return () => {
+      observer.disconnect()
+      onHoverHour(null)
+    }
+  }, [colors, emptyMessage, endHour, mapHour, onHoverHour, onMapHour, series, startHour, variable])
 
   return (
     <div className="series-plot" ref={wrapRef}>

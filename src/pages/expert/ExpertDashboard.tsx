@@ -27,6 +27,7 @@ import { insideBox, type GeoBox } from "./domain/geoBox"
 import {
   countBy,
   fuelLabel,
+  matchesStatus,
   SANCTION_REASONS,
   sanctionCode,
   sourceLabel,
@@ -49,7 +50,9 @@ import "./expert.css"
 
 const DEFAULT_RANGE_DAYS = 31
 // Ancho mínimo de la tarjeta de barras cuando la matriz toma el ancho que necesita.
-const MIN_BARS_WIDTH = 280
+const MIN_BARS_WIDTH = 360
+// Parte del ancho ideal de la matriz que se le da; el resto pasa a las barras.
+const MATRIX_WIDTH_SHARE = 0.9
 // Sin clic en la serie, el mapa usa el mediodía (12:00 COT) del primer día del rango.
 const DEFAULT_MAP_HOUR_OF_DAY = 12
 
@@ -78,6 +81,8 @@ export function ExpertDashboard() {
   const [dateFrom, setDateFrom] = useState(initial.dateFrom)
   const [dateTo, setDateTo] = useState(initial.dateTo)
   const [pickedHour, setPickedHour] = useState<number | null>(initial.pickedHour)
+  // Hora bajo el cursor en la serie; mientras exista, manda sobre la hora fijada.
+  const [hoverHour, setHoverHour] = useState<number | null>(null)
   const [status, setStatus] = useState<StatusFilter>("todas")
   const [selection, setSelection] = useState<GeoBox | null>(initial.selection)
   const [variable, setVariable] = useState<VariableId>(initial.variable)
@@ -131,9 +136,11 @@ export function ExpertDashboard() {
     pickedHour != null && pickedHour >= timeWindow.startHour && pickedHour <= timeWindow.endHour
       ? pickedHour
       : timeWindow.startHour + DEFAULT_MAP_HOUR_OF_DAY
+  const shownHour =
+    hoverHour != null && hoverHour >= timeWindow.startHour && hoverHour <= timeWindow.endHour ? hoverHour : mapHour
 
   const visibleIndustries = useMemo(
-    () => (status === "todas" ? industries : industries.filter((industry) => industry.status === status)),
+    () => (status === "todas" ? industries : industries.filter((industry) => matchesStatus(status, industry.status))),
     [status],
   )
 
@@ -158,10 +165,10 @@ export function ExpertDashboard() {
   )
   const pickedStationIds = useMemo(() => pickedStations.map((station) => station.id), [pickedStations])
 
-  // Valor de cada estación (todas, no solo las del recuadro) en la hora del mapa.
+  // Valor de cada estación (todas, no solo las del recuadro) en la hora que muestra el mapa.
   const readings = useMemo(
-    () => (store ? stationValuesAt(store, variable, mapHour) : {}),
-    [mapHour, store, variable],
+    () => (store ? stationValuesAt(store, variable, shownHour) : {}),
+    [shownHour, store, variable],
   )
   const stationFill = useMemo(() => {
     const fill: Record<string, string> = {}
@@ -175,12 +182,12 @@ export function ExpertDashboard() {
     (station: Station) => {
       const meta = variableById(variable)
       const value = readings[station.id]
-      const when = formatInstant(mapHour)
+      const when = formatInstant(shownHour)
       if (value == null) return `Sin ${meta.label} el ${when}`
       const level = variableLevel(variable, value)
       return `${meta.label} ${formatReading(value)} ${meta.unit}${level ? ` · ${level.label}` : ""} · ${when}`
     },
-    [mapHour, readings, variable],
+    [readings, shownHour, variable],
   )
 
   const series = useMemo(
@@ -288,10 +295,7 @@ export function ExpertDashboard() {
         : pickedStationIds.length === 0
           ? "El recuadro no incluye estaciones"
           : `Sin ${meta.label} para estas estaciones en el rango`
-  const statusName =
-    status === "todas"
-      ? ""
-      : (STATUS_OPTIONS.find((option) => option.id === status)?.label.toLocaleLowerCase("es") ?? "")
+  const statusName = STATUS_OPTIONS.find((option) => option.id === status)?.count ?? ""
 
   // La vista estándar abre en el día y la hora que se ven en el mapa de esta vista.
   function syncToCommon() {
@@ -308,11 +312,11 @@ export function ExpertDashboard() {
         <h1>Calidad del aire en Cundinamarca</h1>
         <p className="header-context">
           Vista experta · {formatDay(timeWindow.startHour)} – {formatDay(timeWindow.endHour)} · Mapa:{" "}
-          {meta.label} el {formatInstant(mapHour)}
+          {meta.label} el {formatInstant(shownHour)}
         </p>
       </header>
 
-      <div className="expert-layout">
+      <div className="expert-layout is-overview">
         <section className="range-bar" aria-label="Periodo y rango de fechas">
           <div className="range-group">
             <span>Datos disponibles</span>
@@ -355,24 +359,6 @@ export function ExpertDashboard() {
           </div>
         </section>
 
-        <section className="status-filter" aria-label="Industrias en el mapa">
-          <span>Industrias en el mapa</span>
-          <div className="segmented" role="radiogroup" aria-label="Industrias en el mapa">
-            {STATUS_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                role="radio"
-                aria-checked={option.id === status}
-                className={option.id === status ? "is-selected" : undefined}
-                onClick={() => setStatus(option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
         <ExpertMap
           industries={visibleIndustries}
           stations={stations}
@@ -382,7 +368,7 @@ export function ExpertDashboard() {
           stationFill={stationFill}
           stationRing={STATION_COLORS}
           stationDetail={stationDetail}
-          hourLabel={`${formatInstant(mapHour)} · ${stationCountLabel(Object.keys(readings).length)}`}
+          hourLabel={`${formatInstant(shownHour)} ·${stationCountLabel(Object.keys(readings).length)}`}
           onSelection={setSelection}
         />
 
@@ -390,7 +376,7 @@ export function ExpertDashboard() {
           <header className="chart-header">
             <h2>Comportamiento media móvil por estación</h2>
             <div className="chart-header-tools">
-              <span className="chart-note">Clic en la serie para elegir la hora del mapa</span>
+              <span className="chart-note">Pase el cursor por la serie para ver esa hora en el mapa · clic para fijarla</span>
               <label className="dark-select">
                 <span>Variable:</span>
                 <select value={variable} onChange={(event) => setVariable(event.target.value as VariableId)}>
@@ -429,6 +415,7 @@ export function ExpertDashboard() {
             endHour={timeWindow.endHour}
             mapHour={mapHour}
             onMapHour={setPickedHour}
+            onHoverHour={setHoverHour}
             emptyMessage={seriesEmpty}
           />
         </section>
@@ -438,7 +425,7 @@ export function ExpertDashboard() {
           style={
             matrixWidth == null
               ? undefined
-              : { gridTemplateColumns: `minmax(0, ${matrixWidth + 2}px) minmax(${MIN_BARS_WIDTH}px, 1fr)` }
+              : { gridTemplateColumns: `minmax(0, ${Math.round((matrixWidth + 2) * MATRIX_WIDTH_SHARE)}px) minmax(${MIN_BARS_WIDTH}px, 1fr)` }
           }
         >
           <section className="chart-card matrix-card" aria-label="Matriz de correlación">
@@ -483,6 +470,24 @@ export function ExpertDashboard() {
                 {pickedIndustries.length} {statusName} {selection ? "dentro del recuadro" : "en total"}
               </span>
             </header>
+            {/* El estado solo afecta a las industrias: estrellas del mapa y estas barras. */}
+            <div className="bars-filter">
+              <div className="segmented is-compact" role="radiogroup" aria-label="Estado de la industria: filtra el mapa y estas barras">
+                {STATUS_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={option.id === status}
+                    className={option.id === status ? "is-selected" : undefined}
+                    title={option.title}
+                    onClick={() => setStatus(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className={status === "sancionada" ? "bars-body has-legend" : "bars-body"}>
               <CategoryBars groups={barGroups} axisLabel="N.º de industrias" />
               {status === "sancionada" && (
@@ -491,11 +496,13 @@ export function ExpertDashboard() {
                   <dl>
                     {SANCTION_REASONS.map((reason) => (
                       <div key={reason.code}>
-                        <dt>
-                          {reason.code}
-                          <span>{sanctionCounts.get(reason.code) ?? 0}</span>
-                        </dt>
-                        <dd>{reason.text}</dd>
+                        <dt>{reason.code}:</dt>
+                        <dd>
+                          <span>{reason.text}</span>
+                          <span className="code-count" title="Industrias con este código">
+                            {sanctionCounts.get(reason.code) ?? 0}
+                          </span>
+                        </dd>
                       </div>
                     ))}
                   </dl>

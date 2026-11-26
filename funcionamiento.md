@@ -6,15 +6,15 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 
 - **Datos disponibles** (`domain/periods.ts`): hay dos periodos, ene–may 2024 y ene–may 2025. Las fechas del filtro solo se pueden elegir dentro del periodo activo; una fecha fuera se ajusta al borde. Al cambiar de periodo, los rangos arrancan en el primer día con mediciones (en 2025 los datos empiezan el 23 de enero; en 2024 terminan el 21 de mayo).
 - **Rango de fechas** (`ExpertDashboard.tsx`): define la serie de tiempo y qué semanas se pueden elegir en las matrices de correlación. Ya no hay filtro de horas: se usan las 24 horas.
-- **Industrias en el mapa:** Todas (default), En seguimiento, En trámite o Sancionadas. Filtra las estrellas del mapa y decide qué histogramas se muestran.
+- **Estado de la industria** (dentro de la tarjeta «Industrias seleccionadas», encima de las barras, en una sola fila): Todas (default), Seguimiento / trámite o Sancionadas. Seguimiento y trámite van juntas porque el mapa las dibuja con el mismo símbolo. Filtra las industrias del mapa y decide qué histogramas se muestran. Está en esa tarjeta porque solo afecta a las industrias; así la serie de tiempo sube hasta la fila de la barra de rango y la fila de matrices y barras queda más alta.
 
 ## Mapa (`map/ExpertMap.tsx`)
 
-- Leaflet con los municipios de `municipios-cundinamarca.json`.
-- **Recuadro de selección:** con la herramienta activa (botón punteado bajo el zoom), arrastrar dibuja un recuadro, y un clic sin arrastrar lo borra. Al desactivarla, el mapa se puede mover. El recuadro inicial está sobre la Sabana Occidente (`INITIAL_SELECTION`).
+- Leaflet con los municipios de `municipios-cundinamarca.json`. El nombre del municipio bajo el cursor aparece arriba a la izquierda, debajo de la etiqueta de la hora del mapa.
+- **Recuadro de selección:** con la herramienta activa (botón punteado bajo el zoom; dice en letra pequeña el modo actual, «Desplazar» o «Selección», y al pasar el cursor muestra un tooltip con la ayuda), arrastrar dibuja un recuadro, y un clic sin arrastrar lo borra. Al desactivarla, el mapa se puede mover. El recuadro inicial está sobre la Sabana Occidente (`INITIAL_SELECTION`).
 - **Estaciones:**
   - El relleno es el nivel de calidad del aire del valor registrado en la **hora del mapa**, para todas las estaciones (no solo las del recuadro).
-  - Hora del mapa por defecto: 12:00 hora de Colombia (COT, UTC−5) del primer día del rango. Un clic en la serie de tiempo la cambia; la etiqueta arriba a la izquierda dice la hora y cuántas estaciones tienen dato.
+  - Hora del mapa por defecto: 12:00 hora de Colombia (COT, UTC−5) del primer día del rango. Pasar el cursor por la serie de tiempo la cambia mientras dura el hover, y un clic la fija; la etiqueta arriba a la izquierda dice la hora y cuántas estaciones tienen dato.
   - El color es el nivel ICA de la Tabla No. 2 del DANE (`domain/icaLevels.ts`): Buena, Moderada, Dañina para grupos sensibles, Dañina, Muy dañina y Peligrosa. La leyenda del mapa muestra los 6 colores.
   - Gris = valor sin categoría ICA (NO₂ por debajo de 1.223 µg/m³); blanco = sin dato a esa hora.
   - Las estaciones dentro del recuadro llevan un anillo del mismo color que su línea en la serie.
@@ -28,7 +28,7 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 - **Fondo = bandas ICA** con los puntos de corte de la Tabla No. 2 (`ICA_CUTS` en `domain/icaLevels.ts`). Los gases (O₃, CO, SO₂, NO₂) vienen en ppm en la tabla y se pasan a µg/m³ a 25 °C y 1 atm. El eje muestra los datos y al menos la banda Buena completa. NO₂ solo tiene cortes desde «Muy dañina» (nota 2 de la tabla), así que con valores bajos no se dibujan bandas y aparece una nota. En O₃, «Peligrosa» usa el corte de 1 h (nota 3).
 - El selector **Variable** solo trae contaminantes (PM2.5, PM10, O₃, NO₂, SO₂, CO) y cambia la serie y el color del mapa.
 - **Clic en la serie:** fija la hora del mapa (línea azul «Mapa · dd/mm hh:00»). El botón «Volver al mediodía del primer día» la restablece, y cambiar las fechas también.
-- Al pasar el cursor se ven los valores de cada estación en esa hora.
+- **Cursor sobre la serie:** el mapa (relleno de estaciones, etiqueta, tooltip y encabezado) muestra la hora bajo el cursor, y el tooltip de la serie da el valor de cada estación. Al sacar el cursor, el mapa vuelve a la hora fijada.
 
 ## Matrices de correlación (`charts/CorrelationMatrix.tsx`)
 
@@ -44,10 +44,10 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
 
 ## Industrias seleccionadas (`charts/CategoryBars.tsx`)
 
-- Cuenta las industrias del estado elegido dentro del recuadro. La tarjeta de las matrices mide lo que necesitan las dos matrices según la altura disponible (`onContentWidth`) y las barras se quedan con el resto de la fila, con un mínimo de 280 px.
+- Cuenta las industrias del estado elegido dentro del recuadro. La tarjeta de las matrices mide lo que necesitan las dos matrices según la altura disponible (`onContentWidth`); recibe el 90 % de ese ancho (`MATRIX_WIDTH_SHARE`) y las barras se quedan con el resto de la fila, con un mínimo de 360 px.
 - **Todas:** una barra por estado (seguimiento, trámite, sancionada).
 - **Seguimiento / trámite:** barras de tipo de fuente de emisión (categorías de `sourceCategory`) y de tipo de combustible. Las categorías de combustible por encima de 4 se agrupan en «Resto»; el tooltip dice cuáles son.
-- **Sancionadas:** barras de razón de sanción por código (R1–R3), con un cuadro debajo que trae el texto completo de cada código y su conteo.
+- **Sancionadas:** barras de razón de sanción por código (R1–R3), con un cuadro debajo que trae, en una línea por código, «R#: texto completo» y su conteo. El tooltip de una industria sancionada en el mapa solo dice «Código de sanción: R#».
 - Los códigos salen de la columna `ClassCode` de `Data/industries.json`, creada en `Preprocessing/industry_cleaning.ipynb`.
 
 ## Datos (`data/measurements.ts`)

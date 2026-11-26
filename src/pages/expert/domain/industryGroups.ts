@@ -1,15 +1,26 @@
 import rawIndustries from "../../../../Data/industries.json"
 import { SOURCE_OPTIONS, type Industry, type IndustryStatus } from "../../../domain/industry"
 
-// «Todas» muestra a la vez las tres categorías en el mapa.
-export type StatusFilter = IndustryStatus | "todas"
+// «Todas» muestra a la vez las tres categorías en el mapa. Seguimiento y trámite van juntas
+// porque el mapa las dibuja con el mismo símbolo (fábrica con solo el contorno).
+export type StatusFilter = "todas" | "abiertas" | "sancionada"
 
-export const STATUS_OPTIONS: ReadonlyArray<{ id: StatusFilter; label: string }> = [
-  { id: "todas", label: "Todas" },
-  { id: "seguimiento", label: "En seguimiento" },
-  { id: "tramite", label: "En trámite" },
-  { id: "sancionada", label: "Sancionadas" },
+export const STATUS_OPTIONS: ReadonlyArray<{ id: StatusFilter; label: string; count: string; title: string }> = [
+  { id: "todas", label: "Todas", count: "", title: "Todas las industrias" },
+  {
+    id: "abiertas",
+    label: "Seguimiento / trámite",
+    count: "en seguimiento o trámite",
+    title: "Industrias en seguimiento y control o con un trámite en curso",
+  },
+  { id: "sancionada", label: "Sancionadas", count: "sancionadas", title: "Industrias con una sanción" },
 ]
+
+export function matchesStatus(filter: StatusFilter, status: IndustryStatus): boolean {
+  if (filter === "todas") return true
+  if (filter === "abiertas") return status === "seguimiento" || status === "tramite"
+  return status === "sancionada"
+}
 
 export type CategoryCount = { label: string; count: number; title?: string }
 
