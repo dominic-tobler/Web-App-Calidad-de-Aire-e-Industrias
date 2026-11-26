@@ -47,7 +47,7 @@ import {
   type Station,
   type StationLink,
 } from "../../domain/station"
-import { INDUSTRY_STATUS_STYLE, industryMarkerHtml, type MarkerStyle } from "./industryMarkers"
+import { INDUSTRY_ICON_SIZE, INDUSTRY_STATUS_STYLE, industryMarkerHtml, type MarkerStyle } from "./industryMarkers"
 import { IndustryIcon } from "./IndustryIcon"
 import { attachSmoothWheel, flyZoom, glideToBounds, smoothMapOptions } from "./smoothMap"
 
@@ -85,8 +85,6 @@ function windArrowIcon(fromBearing: number) {
     html: `<svg viewBox="0 0 36 64" width="${WIND_WAVE_WIDTH}" height="${WIND_WAVE_HEIGHT}" aria-hidden="true" style="transform:rotate(${flow}deg)"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 60C5 49 31 43 18 32C5 21 31 16 18 11" stroke="#ffffff" stroke-width="7"/><path d="M8 17 18 3 28 17" stroke="#ffffff" stroke-width="7"/><path d="M18 60C5 49 31 43 18 32C5 21 31 16 18 11" stroke="#1a4dd9" stroke-width="2.6"/><path d="M8 17 18 3 28 17" stroke="#1a4dd9" stroke-width="2.6"/></g></svg>`,
   })
 }
-
-const INDUSTRY_ICON_SIZE = 18
 
 const ICONS = {
   sancionada: industryIcon(INDUSTRY_STATUS_STYLE.sancionada),
@@ -276,7 +274,7 @@ export function CundinamarcaMap({
       })
         .bindTooltip(tooltipHtml(industry), {
           direction: "top",
-          offset: [0, -8],
+          offset: [0, -13],
           opacity: 1,
           className: "industry-tooltip",
         })

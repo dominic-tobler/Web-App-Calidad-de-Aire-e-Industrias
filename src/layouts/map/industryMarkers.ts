@@ -1,19 +1,40 @@
-export type MarkerStyle = { fill: string; stroke: string; strokeWidth: number }
+export type IndustryMark = "sancionada" | "seguimiento"
 
-// Convención de las industrias en todos los mapas (vista común y experta). El rojo queda
-// reservado al ICA de las estaciones. Mismo tamaño para todos los estados; se distinguen
-// por relleno: sancionada = fábrica sólida, seguimiento o en trámite = solo el contorno.
+export type MarkerStyle = { mark: IndustryMark }
+
+// Mismos colores. La fábrica ocupa el icono entero: el marco la dejaba demasiado chica.
+const SANCTION = "#d9685b"
+const WATCH = "#58add9"
+const HALO = "#000000"
+
+export const INDUSTRY_ICON_SIZE = 22
+
+// Sancionada = fábrica roja sólida. Seguimiento y trámite = fábrica azul sólida.
 export const INDUSTRY_STATUS_STYLE = {
-  sancionada: { fill: "#1a2420", stroke: "#ffffff", strokeWidth: 0.65 },
-  seguimiento: { fill: "#ffffff", stroke: "#243830", strokeWidth: 1.1 },
-  tramite: { fill: "#ffffff", stroke: "#243830", strokeWidth: 1.1 },
+  sancionada: { mark: "sancionada" },
+  seguimiento: { mark: "seguimiento" },
+  tramite: { mark: "seguimiento" },
 } as const satisfies Record<string, MarkerStyle>
 
-// Silueta de fábrica (viewBox 16): chimenea, cubierta en diente de sierra,
-// nave lateral y ventanas recortadas con fill-rule="evenodd".
-export const FACTORY_PATH =
-  "M1.2 14.8V7.1L2.2 6.4V1.15h1.5V5.34L3.9 5.2v1.5l2.8-2v1.5l2.8-2V8.8h5.3v6H1.2zM2.35 10.2h1.4v1.7h-1.4zM4.5 10.2h1.4v1.7H4.5zM6.7 10.2h1.4v1.7H6.7zM11.35 10.5h1.7v1.65h-1.7z"
+// Chimenea alta, dos dientes de sierra y nave ancha. El borde negro la separa del mapa gris.
+const FACTORY = "M2.8 21.4V12.6H5.1V3.2H8.2V10.4L11.4 7.6 14.2 10.6 17 7.6 19.6 10.6H21.2V21.4Z"
 
-export function industryMarkerHtml(style: MarkerStyle, size = 18) {
-  return `<svg viewBox="0 0 16 16" width="${size}" height="${size}" aria-hidden="true"><path fill="${style.fill}" stroke="${style.stroke}" stroke-width="${style.strokeWidth}" fill-rule="evenodd" d="${FACTORY_PATH}"/></svg>`
+function factory(color: string) {
+  return `<path fill="${color}" stroke="${HALO}" stroke-width="3.2" stroke-linejoin="round" paint-order="stroke fill" d="${FACTORY}"/>`
+}
+
+function sanctionMark() {
+  return factory(SANCTION)
+}
+
+function watchMark() {
+  return factory(WATCH)
+}
+
+export function industryMarkInner(style: MarkerStyle) {
+  return style.mark === "sancionada" ? sanctionMark() : watchMark()
+}
+
+export function industryMarkerHtml(style: MarkerStyle, size = INDUSTRY_ICON_SIZE) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${industryMarkInner(style)}</svg>`
 }

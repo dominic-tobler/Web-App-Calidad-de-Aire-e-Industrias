@@ -7,6 +7,7 @@ import {
   dailyAverageReadings,
   daysWithReadings,
   hourlySeries,
+  hourlySeriesForStations,
   loadObservations,
   monthsWithReadings,
   readingAt,
@@ -37,11 +38,12 @@ import {
   emissionSourceLabel,
   formatPlace,
   industryMunicipalityKey,
+  municipalityKey,
   placeWithDepartment,
   statusLabel,
   type Industry,
 } from "../../domain/industry"
-import { stationPlace, stationStatusLabel, stationTitle } from "../../domain/station"
+import { stationPlace, stationStatusLabel, stationTitle, type Station } from "../../domain/station"
 import { COLOMBIA_TIME_LABEL, formatHour, formatInstant, MONTHS, YEARS, type Year } from "../../domain/time"
 import {
   CundinamarcaMap,
@@ -60,7 +62,8 @@ import "./dashboard.css"
 const NEARBY_LIST_LIMIT = 6
 
 export function CommonDashboard() {
-  const { state, setDate, setHour, setPlaying, setPollutant, setSelectedStation, setSource } = useCommonState()
+  const { state, setDate, setHour, setHourlyStationIds, setPlaying, setPollutant, setSelectedStation, setSource } =
+    useCommonState()
   const [calendar, setCalendar] = useState(() => ({ year: state.year, month: state.month }))
   const [observationsState, setObservationsState] = useState<"loading" | "ready" | "error">("loading")
   const [observationsError, setObservationsError] = useState<string | null>(null)
@@ -126,17 +129,32 @@ export function CommonDashboard() {
     () => readingsAtHour(state.pollutant, state.year, state.month, state.day, state.hour),
     [observationsState, state.pollutant, state.year, state.month, state.day, state.hour],
   )
-  const series = useMemo(
-    () =>
-      hourlySeries(
+  const series = useMemo(() => {
+    if (state.selectedStationId) {
+      return hourlySeries(
         state.pollutant,
         state.year,
         state.month,
         state.day,
         state.selectedStationId,
-      ),
-    [observationsState, state.pollutant, state.year, state.month, state.day, state.selectedStationId],
-  )
+      )
+    }
+    return hourlySeriesForStations(
+      state.pollutant,
+      state.year,
+      state.month,
+      state.day,
+      state.hourlyStationIds,
+    )
+  }, [
+    observationsState,
+    state.hourlyStationIds,
+    state.pollutant,
+    state.year,
+    state.month,
+    state.day,
+    state.selectedStationId,
+  ])
   const daySeries = useMemo(
     () => hourlySeries(state.pollutant, state.year, state.month, state.day, null),
     [observationsState, state.pollutant, state.year, state.month, state.day],
@@ -184,12 +202,17 @@ export function CommonDashboard() {
 
   // Estación y municipio se excluyen: elegir uno quita el otro.
   function selectStation(id: string | null) {
-    if (id != null) setMunicipality(null)
+    if (id != null) {
+      setMunicipality(null)
+      setHourlyStationIds(null)
+    }
     setSelectedStation(id)
   }
 
   function selectMunicipality(next: MunicipalityRef | null) {
-    setMunicipality((current) => (next && current?.key === next.key ? null : next))
+    const chosen = next && municipality?.key === next.key ? null : next
+    setMunicipality(chosen)
+    setHourlyStationIds(chosen ? stationIdsInMunicipality(chosen.key) : null)
     if (next) setSelectedStation(null)
   }
 
@@ -265,7 +288,7 @@ export function CommonDashboard() {
             hour={state.hour}
             pollutant={state.pollutant}
             series={series}
-            seriesLabel={selectedStation ? stationTitle(selectedStation) : "Promedio de estaciones"}
+            seriesLabel={hourlySeriesLabel(selectedStation, municipality, state.hourlyStationIds)}
             playing={state.playing}
             onHour={setHour}
             onPlaying={setPlaying}
@@ -438,6 +461,28 @@ function topSources(list: readonly Industry[]): {
     (left, right) => right.count - left.count || left.label.localeCompare(right.label, "es"),
   )
   return { top: sorted.slice(0, SOURCE_LIST_LIMIT), rest: Math.max(0, sorted.length - SOURCE_LIST_LIMIT) }
+}
+
+function stationIdsInMunicipality(key: string): string[] {
+  return stations.flatMap((station) =>
+    station.municipality &&
+    station.department &&
+    municipalityKey(station.department, station.municipality) === key
+      ? [station.id]
+      : [],
+  )
+}
+
+function hourlySeriesLabel(
+  station: Station | null,
+  municipality: MunicipalityRef | null,
+  stationIds: string[] | null,
+): string {
+  if (station) return stationTitle(station)
+  if (!municipality) return "Promedio de estaciones"
+  const place = formatPlace(municipality.name)
+  if (!stationIds || stationIds.length === 0) return `Sin estaciones en ${place}`
+  return `Promedio en ${place}`
 }
 
 function municipalitySubtitle(municipality: MunicipalityRef): string {

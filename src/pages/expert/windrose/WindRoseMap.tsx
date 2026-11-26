@@ -20,7 +20,12 @@ import { boyacaMunicipalities, municipalities } from "../../../data/municipaliti
 import { formatPlace, placeWithDepartment, statusLabel, type Industry } from "../../../domain/industry"
 import { stationPlace, stationTitle, type Station } from "../../../domain/station"
 import { IndustryIcon } from "../../../layouts/map/IndustryIcon"
-import { INDUSTRY_STATUS_STYLE, industryMarkerHtml, type MarkerStyle } from "../../../layouts/map/industryMarkers"
+import {
+  INDUSTRY_ICON_SIZE,
+  INDUSTRY_STATUS_STYLE,
+  industryMarkerHtml,
+  type MarkerStyle,
+} from "../../../layouts/map/industryMarkers"
 import { attachSmoothWheel, flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
 import { ICA_LEVELS } from "../domain/icaLevels"
 import { DIRECTION_LABELS, SECTOR_DEG, destination, type FanSector } from "./windRose"
@@ -224,7 +229,7 @@ export function WindRoseMap({
     })
   }, [fan, fanRadiusKm, selectedId, stations])
 
-  // Industrias: misma convención de fábricas; fuera del abanico se atenúan.
+  // Industrias: fábrica roja sólida = sancionada; fábrica azul sólida = seguimiento o trámite. Fuera del abanico se atenúan.
   useEffect(() => {
     const layer = industriesLayerRef.current
     if (!layer) return
@@ -240,7 +245,7 @@ export function WindRoseMap({
       })
         .bindTooltip(industryTooltip(industry, upwind), {
           direction: "top",
-          offset: [0, -8],
+          offset: [0, -13],
           opacity: 1,
           className: "industry-tooltip",
         })
@@ -343,12 +348,11 @@ function isPath(layer: unknown): layer is Path {
   return typeof layer === "object" && layer !== null && "setStyle" in layer
 }
 
-// Mismo ícono de fábrica que los otros mapas (industryMarkers.ts).
 function industryIcon(style: MarkerStyle, dimmed: boolean) {
   return divIcon({
     className: dimmed ? "industry-marker is-dimmed" : "industry-marker",
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
+    iconSize: [INDUSTRY_ICON_SIZE, INDUSTRY_ICON_SIZE],
+    iconAnchor: [INDUSTRY_ICON_SIZE / 2, INDUSTRY_ICON_SIZE / 2],
     html: industryMarkerHtml(style),
   })
 }

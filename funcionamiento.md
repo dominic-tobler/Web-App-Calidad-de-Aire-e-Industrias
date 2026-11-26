@@ -18,7 +18,7 @@ Corre con `npm run dev:expert` → http://localhost:5174. El código está en `s
   - El color es el nivel ICA de la Tabla No. 2 del DANE (`domain/icaLevels.ts`): Buena, Moderada, Dañina para grupos sensibles, Dañina, Muy dañina y Peligrosa. La leyenda del mapa muestra los 6 colores.
   - Gris = valor sin categoría ICA (NO₂ por debajo de 1.223 µg/m³); blanco = sin dato a esa hora.
   - Las estaciones dentro del recuadro llevan un anillo del mismo color que su línea en la serie.
-- **Industrias:** misma convención que la vista común (`INDUSTRY_STATUS_STYLE` en `src/layouts/map/industryMarkers.ts`): fábrica oscura sólida = sancionada, fábrica con solo el contorno = seguimiento o trámite. No se usa rojo para no confundirlas con el ICA de las estaciones. Las que quedan fuera del recuadro se atenúan.
+- **Industrias:** misma convención que la vista común (`INDUSTRY_STATUS_STYLE` en `src/layouts/map/industryMarkers.ts`): fábrica roja sólida = sancionada; fábrica azul sólida = seguimiento o trámite. Las que quedan fuera del recuadro se atenúan.
 - La etiqueta azul cuenta las estaciones y las industrias dentro del recuadro.
 
 ## Serie de tiempo (`charts/MovingAverageSeries.tsx`)

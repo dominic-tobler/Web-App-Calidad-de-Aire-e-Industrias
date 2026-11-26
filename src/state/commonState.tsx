@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react"
 import type { Pollutant } from "../domain/airQuality"
-import { hourlySeries } from "../data/observations"
+import { hourlySeries, hourlySeriesForStations } from "../data/observations"
 import { daysInMonth, type Year } from "../domain/time"
 
 export type CommonView = "exploracion" | "analisis"
@@ -25,6 +25,9 @@ export type CommonState = {
   mapExpanded: boolean
   playing: boolean
   selectedStationId: string | null
+  // Null: promedio de todas las estaciones cuando no hay una elegida.
+  // Lista: promedio de esas estaciones, por ejemplo las de un municipio.
+  hourlyStationIds: string[] | null
 }
 
 type CommonContextValue = {
@@ -41,6 +44,7 @@ type CommonContextValue = {
   setMapExpanded: (expanded: boolean) => void
   setPlaying: (playing: boolean) => void
   setSelectedStation: (id: string | null) => void
+  setHourlyStationIds: (ids: string[] | null) => void
   shiftMonth: (delta: number) => void
 }
 
@@ -61,6 +65,7 @@ const initialState: CommonState = {
   mapExpanded: false,
   playing: false,
   selectedStationId: "3",
+  hourlyStationIds: null,
 }
 
 export function CommonStateProvider({ children }: { children: ReactNode }) {
@@ -114,6 +119,13 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
           selectedStationId: id !== null && current.selectedStationId === id ? null : id,
         }))
       },
+      setHourlyStationIds: (ids) => {
+        setState((current) => {
+          const next = ids ? [...ids] : null
+          if (sameStationIds(current.hourlyStationIds, next)) return current
+          return { ...current, hourlyStationIds: next }
+        })
+      },
       shiftMonth: (delta) => {
         setState((current) => {
           const cursor = current.year * 12 + current.month + delta
@@ -137,29 +149,44 @@ export function CommonStateProvider({ children }: { children: ReactNode }) {
 }
 
 function readingAtState(current: CommonState): number | null {
-  return hourlySeries(
-    current.pollutant,
-    current.year,
-    current.month,
-    current.day,
-    current.selectedStationId,
-  )[current.hour] ?? null
+  return seriesFor(current)[current.hour] ?? null
 }
 
 // La siguiente hora del mismo día que sí tiene medición. Null si no hay otra.
 function nextHourWithReading(current: CommonState): number | null {
-  const series = hourlySeries(
-    current.pollutant,
-    current.year,
-    current.month,
-    current.day,
-    current.selectedStationId,
-  )
+  const series = seriesFor(current)
   for (let step = 1; step < 24; step += 1) {
     const hour = (current.hour + step) % 24
     if (series[hour] != null) return hour
   }
   return null
+}
+
+// Estación elegida, o el promedio de las estaciones indicadas (un municipio),
+// o el promedio de todas si no hay ninguna lista.
+function seriesFor(current: CommonState): Array<number | null> {
+  if (current.selectedStationId) {
+    return hourlySeries(
+      current.pollutant,
+      current.year,
+      current.month,
+      current.day,
+      current.selectedStationId,
+    )
+  }
+  return hourlySeriesForStations(
+    current.pollutant,
+    current.year,
+    current.month,
+    current.day,
+    current.hourlyStationIds,
+  )
+}
+
+function sameStationIds(left: string[] | null, right: string[] | null): boolean {
+  if (left === right) return true
+  if (!left || !right || left.length !== right.length) return false
+  return left.every((id, index) => id === right[index])
 }
 
 export function useCommonState(): CommonContextValue {

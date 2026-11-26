@@ -81,9 +81,35 @@ export function hourlySeries(
   if (stationId) {
     return seriesByStation.get(dayKey(pollutant, year, month, day, stationId)) ?? emptyHours()
   }
-  const totals = totalsByDay.get(dayKey(pollutant, year, month, day))
-  if (!totals) return emptyHours()
-  return totals.sum.map((sum, hour) => (totals.count[hour] === 0 ? null : sum / totals.count[hour]))
+  return averageOfAllStations(pollutant, year, month, day)
+}
+
+// Null: promedio de todas las estaciones. Lista: promedio de esas estaciones
+// (por ejemplo las de un municipio). Una lista vacía no tiene mediciones.
+export function hourlySeriesForStations(
+  pollutant: Pollutant,
+  year: number,
+  month: number,
+  day: number,
+  stationIds: readonly string[] | null,
+): Array<number | null> {
+  if (stationIds == null) return averageOfAllStations(pollutant, year, month, day)
+  if (stationIds.length === 0) return emptyHours()
+  if (stationIds.length === 1) return hourlySeries(pollutant, year, month, day, stationIds[0])
+
+  const sum = Array<number>(24).fill(0)
+  const count = Array<number>(24).fill(0)
+  for (const stationId of stationIds) {
+    const series = seriesByStation.get(dayKey(pollutant, year, month, day, stationId))
+    if (!series) continue
+    for (let hour = 0; hour < 24; hour += 1) {
+      const value = series[hour]
+      if (value == null) continue
+      sum[hour] += value
+      count[hour] += 1
+    }
+  }
+  return sum.map((total, hour) => (count[hour] === 0 ? null : total / count[hour]))
 }
 
 export type MonthRef = { year: number; month: number }
@@ -255,6 +281,17 @@ function dayKey(
 ): string {
   const key = `${pollutant}|${year}|${month}|${day}`
   return stationId ? `${key}|${stationId}` : key
+}
+
+function averageOfAllStations(
+  pollutant: Pollutant,
+  year: number,
+  month: number,
+  day: number,
+): Array<number | null> {
+  const totals = totalsByDay.get(dayKey(pollutant, year, month, day))
+  if (!totals) return emptyHours()
+  return totals.sum.map((sum, hour) => (totals.count[hour] === 0 ? null : sum / totals.count[hour]))
 }
 
 function emptyHours(): Array<number | null> {
