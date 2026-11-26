@@ -147,7 +147,10 @@ export function attachSmoothWheel(map: LeafletMap) {
 
   DomEvent.on(container, "wheel", onWheel)
 
+  // Se llama justo antes de map.remove(): también corta un acercamiento en curso, que si no
+  // seguiría moviendo un mapa ya destruido (error "_leaflet_pos" de Leaflet).
   return () => {
+    cancelGlide(map, false)
     DomEvent.off(container, "wheel", onWheel)
     cancelAnimationFrame(frame)
     window.clearTimeout(settle)
@@ -256,6 +259,7 @@ export function glideToBounds(
     if (wasGliding) {
       pinch._move(targetCenter, targetZoom)
       pinch._moveEnd(true)
+      sharpenTiles(map, () => glides.has(map))
     }
     return
   }
@@ -280,13 +284,17 @@ export function glideToBounds(
     const t = Math.min(1, (now - started) / duration)
     const eased = 1 - (1 - t) ** 3
     const zoom = startZoom + (targetZoom - startZoom) * eased
+    // `pinch` obliga a Leaflet a emitir "zoom" en cada cuadro aunque el zoom no cambie.
+    // Las teselas solo se reacomodan con ese evento: sin él, un vuelo que solo desplaza
+    // (p. ej. entre dos municipios con el mismo zoom tope) deja el mapa base quieto
+    // mientras los polígonos sí se mueven.
     pinch._move(
       latLng(
         startCenter.lat + (targetCenter.lat - startCenter.lat) * eased,
         startCenter.lng + (targetCenter.lng - startCenter.lng) * eased,
       ),
       zoom,
-      { flyTo: true },
+      { flyTo: true, pinch: true },
     )
     redrawVectors(map)
     if (t < 1) {
@@ -298,6 +306,8 @@ export function glideToBounds(
     pinch._moveEnd(true)
     map.off("dragstart", job.onDrag)
     glides.delete(map)
+    // Durante el vuelo las teselas no cambian de nivel; al llegar se piden las del zoom final.
+    sharpenTiles(map, () => glides.has(map))
   }
 
   job.frame = requestAnimationFrame(frame)
