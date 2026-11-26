@@ -27,6 +27,7 @@ import {
   type MarkerStyle,
 } from "../../../layouts/map/industryMarkers"
 import { attachSmoothWheel, flyZoom, smoothMapOptions } from "../../../layouts/map/smoothMap"
+import { windArrowIcon } from "../../../layouts/map/windArrow"
 import { ICA_LEVELS } from "../domain/icaLevels"
 import { DIRECTION_LABELS, SECTOR_DEG, destination, type FanSector } from "./windRose"
 
@@ -222,6 +223,12 @@ export function WindRoseMap({
         fillOpacity: FAN_OPACITY[rank] ?? 0.12,
         interactive: false,
       }).addTo(layer)
+      marker(destination(station.latitude, station.longitude, center, fanRadiusKm * 0.4), {
+        pane: "fan",
+        interactive: false,
+        keyboard: false,
+        icon: windArrowIcon(center),
+      }).addTo(layer)
       tooltip({ permanent: true, direction: "center", className: "fan-label", pane: "tooltipPane" })
         .setLatLng(destination(station.latitude, station.longitude, center, fanRadiusKm * 0.72))
         .setContent(`${rank + 1} · ${DIRECTION_LABELS[item.sector]} ${Math.round(item.share * 100)}%`)
@@ -312,7 +319,7 @@ export function WindRoseMap({
       <div className="map-footer">
         <div className="expert-map-notes">
           <p className="brush-hint">
-            Clic en una estación. El abanico azul marca las 3 direcciones con más carga del contaminante.
+            Clic en una estación. El abanico azul marca las 3 direcciones con más carga del contaminante. La onda apunta a la estación.
           </p>
           <div className="symbol-legend">
             <div className="symbol-row">
