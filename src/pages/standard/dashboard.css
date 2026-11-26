@@ -801,6 +801,16 @@ select:focus-visible {
   display: none;
 }
 
+.leaflet-div-icon.wind-arrow {
+  background: transparent;
+  border: 0;
+}
+
+.wind-arrow svg {
+  display: block;
+  overflow: visible;
+}
+
 .wind-rose {
   display: grid;
   grid-template-columns: 148px minmax(0, 1fr);

@@ -72,6 +72,19 @@ type CundinamarcaMapProps = {
 export type MunicipalityRef = { key: string; name: string; department: string }
 
 const REGION_OPACITY = [0.34, 0.24, 0.16]
+const WIND_WAVE_WIDTH = 30
+const WIND_WAVE_HEIGHT = 54
+
+// Onda hacia la estación: el sector marca de dónde vino el viento ese día.
+function windArrowIcon(fromBearing: number) {
+  const flow = (fromBearing + 180) % 360
+  return divIcon({
+    className: "leaflet-div-icon wind-arrow",
+    iconSize: [WIND_WAVE_WIDTH, WIND_WAVE_HEIGHT],
+    iconAnchor: [WIND_WAVE_WIDTH / 2, WIND_WAVE_HEIGHT / 2],
+    html: `<svg viewBox="0 0 36 64" width="${WIND_WAVE_WIDTH}" height="${WIND_WAVE_HEIGHT}" aria-hidden="true" style="transform:rotate(${flow}deg)"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 60C5 49 31 43 18 32C5 21 31 16 18 11" stroke="#ffffff" stroke-width="7"/><path d="M8 17 18 3 28 17" stroke="#ffffff" stroke-width="7"/><path d="M18 60C5 49 31 43 18 32C5 21 31 16 18 11" stroke="#1a4dd9" stroke-width="2.6"/><path d="M8 17 18 3 28 17" stroke="#1a4dd9" stroke-width="2.6"/></g></svg>`,
+  })
+}
 
 const INDUSTRY_ICON_SIZE = 18
 
@@ -303,6 +316,12 @@ export function CundinamarcaMap({
         fillOpacity: REGION_OPACITY[rank] ?? 0.12,
         interactive: false,
       }).addTo(layer)
+      marker(destination(station.latitude, station.longitude, center, searchRadiusKm * 0.4), {
+        pane: "search-radius",
+        interactive: false,
+        keyboard: false,
+        icon: windArrowIcon(center),
+      }).addTo(layer)
       const share = `${Math.round(region.share * 100)}%`
       tooltip({ permanent: true, direction: "center", className: "fan-label", pane: "tooltipPane" })
         .setLatLng(destination(station.latitude, station.longitude, center, searchRadiusKm * 0.72))
@@ -524,7 +543,7 @@ export function MapLegend({ selection = null, municipalitySelected = false }: Ma
             {selection.hasWind && (
               <li>
                 <span className="wind-swatch" />
-                Lados de donde vino el viento. Más intenso, más horas
+                De dónde vino el viento este día. La onda apunta a la estación. Más intenso, más horas
               </li>
             )}
             <li>
