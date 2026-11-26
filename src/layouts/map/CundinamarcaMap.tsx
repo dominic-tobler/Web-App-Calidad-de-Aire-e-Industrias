@@ -29,7 +29,7 @@ import {
   type Pollutant,
 } from "../../domain/airQuality"
 import { ICA_UNCLASSIFIED } from "../../domain/icaLevels"
-import { LevelTip } from "../PollutantTip"
+import { LayersTip, LevelTip } from "../PollutantTip"
 
 import {
   formatPlace,
@@ -472,10 +472,10 @@ export function MapLegend({ selection = null, municipalitySelected = false }: Ma
   return (
     <section className="map-legend" aria-label="Leyenda del mapa">
       <div className="legend-block">
-        <h2>Calidad del aire (ICA)</h2>
-        <p>
-          Estaciones: lectura a la hora elegida. Calendario: promedio del día. <LevelTip />
-        </p>
+        <div className="legend-heading">
+          <h2>Calidad del aire (ICA)</h2>
+          <LevelTip />
+        </div>
         <ul className="level-scale" aria-label="Colores del Índice de calidad del aire">
           {AIR_QUALITY_LEVELS.map((level) => (
             <li key={level.id} title={`${level.label} · ICA ${level.ica}`}>
@@ -494,7 +494,10 @@ export function MapLegend({ selection = null, municipalitySelected = false }: Ma
         </ul>
       </div>
       <div className="legend-block">
-        <h2>Capas del mapa</h2>
+        <div className="legend-heading">
+          <h2>Capas del mapa</h2>
+          <LayersTip />
+        </div>
         <ul className="legend-items">
           <li>
             <span className="station-dot is-ica" />
@@ -620,7 +623,7 @@ function tooltipHtml(industry: Industry) {
   const source = escapeHtml(industry.sourceRaw || "Fuente sin tipo")
   const fuel = escapeHtml(industry.fuel)
   const status = escapeHtml(statusLabel(industry.status))
-  return `<strong>${place}${vereda}</strong><span>${source}</span><span>${fuel} · ${status}</span><span>Expediente ${industry.expediente}</span>`
+  return `<strong>${place}${vereda}</strong><span>${source}</span><span>${fuel} · ${status}</span>`
 }
 
 function escapeHtml(value: string) {

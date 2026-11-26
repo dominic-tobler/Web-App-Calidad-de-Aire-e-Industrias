@@ -6,6 +6,8 @@ import {
   pollutantInfo,
   type Pollutant,
 } from "../domain/airQuality"
+import { IndustryIcon } from "./map/IndustryIcon"
+import { INDUSTRY_STATUS_STYLE } from "./map/industryMarkers"
 
 export function PollutantTip({ pollutant }: { pollutant: Pollutant }) {
   const info = pollutantInfo(pollutant)
@@ -25,23 +27,46 @@ export function PollutantTip({ pollutant }: { pollutant: Pollutant }) {
   )
 }
 
-// Estados del expediente de cada industria (columna Estado de industries.json).
-export function StatusTip() {
+// Símbolos fijos de la leyenda «Capas del mapa».
+export function LayersTip() {
   return (
-    <HoverTip label="¿Qué significa?" contentKey="estado">
-      <strong>Estado de la industria</strong>
-      <p>
-        <b>Sancionada:</b> la autoridad ambiental le abrió un proceso sancionatorio por sus emisiones
-        al aire: emitir sin permiso o sin cumplirlo, sin los requisitos de ley o por encima de los límites
-        de la norma.
-      </p>
-      <p>
-        <b>En seguimiento:</b> la autoridad ambiental la vigila y revisa que cumpla, sin un proceso
-        sancionatorio abierto.
-      </p>
-      <p className="pollutant-tip-unit">
-        Es el estado de su expediente. No dice cuánto contamina hoy.
-      </p>
+    <HoverTip label="¿Qué significa?" contentKey="capas">
+      <strong>Capas del mapa</strong>
+      <ul className="level-tip-list">
+        <li>
+          <span className="station-dot is-ica" />
+          <span>
+            <b>Estación.</b> Mide la calidad del aire. El color es el nivel a la hora elegida.
+          </span>
+        </li>
+        <li>
+          <IndustryIcon style={INDUSTRY_STATUS_STYLE.sancionada} />
+          <span>
+            <b>Sancionada.</b> La autoridad ambiental le abrió un proceso sancionatorio por sus
+            emisiones al aire: emitir sin permiso o sin cumplirlo, sin los requisitos de ley o por
+            encima de los límites de la norma.
+          </span>
+        </li>
+        <li>
+          <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} />
+          <span>
+            <b>En seguimiento.</b> La autoridad ambiental la vigila y revisa que cumpla, sin un
+            proceso sancionatorio abierto.
+          </span>
+        </li>
+        <li>
+          <span className="territory-swatch is-cundinamarca" />
+          <span>
+            <b>Cundinamarca.</b> Municipios del departamento.
+          </span>
+        </li>
+        <li>
+          <span className="territory-swatch is-boyaca" />
+          <span>
+            <b>Boyacá.</b> Ráquira y Chiquinquirá, en el límite con Cundinamarca.
+          </span>
+        </li>
+      </ul>
     </HoverTip>
   )
 }

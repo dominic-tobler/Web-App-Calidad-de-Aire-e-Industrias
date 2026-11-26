@@ -54,7 +54,8 @@ export function HourlyTrend({
 
       const bands = icaBands(pollutant)
       const showLabels = bands.length > 0 && width >= 320
-      const margin = { top: 8, right: showLabels ? 84 : 12, bottom: 26, left: 72 }
+      // Abajo cabe la marca de hora y el nombre del eje; a la izquierda, el título vertical y los números.
+      const margin = { top: 8, right: showLabels ? 84 : 18, bottom: 42, left: 76 }
       const innerWidth = width - margin.left - margin.right
       const innerHeight = height - margin.top - margin.bottom
       if (innerWidth < 20 || innerHeight < 20) return
@@ -128,7 +129,7 @@ export function HourlyTrend({
       const axis = d3
         .axisBottom(xScale)
         .tickValues(width < 460 ? [0, 6, 12, 18, 23] : [0, 3, 6, 9, 12, 15, 18, 21, 23])
-        .tickFormat((value) => formatHour(Number(value)).slice(0, 2))
+        .tickFormat((value) => `${formatHour(Number(value)).slice(0, 2)} h`)
 
       plot
         .append("g")
@@ -138,11 +139,23 @@ export function HourlyTrend({
         .call((group) =>
           group
             .selectAll("text")
-            .attr("fill", "#5c6b64")
+            .attr("fill", "#3d4f48")
             .attr("font-size", 11)
-            .attr("font-family", FONT),
+            .attr("font-family", FONT)
+            .attr("text-anchor", (value) => (Number(value) === 0 ? "start" : Number(value) === 23 ? "end" : "middle")),
         )
         .call((group) => group.selectAll("line").attr("stroke", "#d3ddd7"))
+
+      plot
+        .append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 34)
+        .attr("text-anchor", "middle")
+        .attr("fill", "#3d4f48")
+        .attr("font-size", 11)
+        .attr("font-weight", 600)
+        .attr("font-family", FONT)
+        .text("Hora")
 
       plot
         .append("g")
@@ -159,13 +172,13 @@ export function HourlyTrend({
 
       svg
         .append("text")
-        .attr("transform", `translate(16,${margin.top + innerHeight / 2}) rotate(-90)`)
+        .attr("transform", `translate(15,${margin.top + innerHeight / 2}) rotate(-90)`)
         .attr("text-anchor", "middle")
-        .attr("fill", "#5c6b64")
+        .attr("fill", "#3d4f48")
         .attr("font-size", 11)
         .attr("font-weight", 600)
         .attr("font-family", FONT)
-        .text(innerHeight < 120 ? "µg/m³" : AXIS_TITLE)
+        .text(innerHeight < 108 ? "µg/m³" : AXIS_TITLE)
 
       const line = d3
         .line<HourPoint>()
@@ -319,20 +332,21 @@ export function HourlyTrend({
               </>
             )}
           </p>
-          <p className="trend-caption">
-            {seriesLabel} · {formatHour(hour)}
-          </p>
+          <button
+            type="button"
+            className="trend-play"
+            aria-pressed={playing}
+            aria-label={playing ? "Pausar la animación del día" : "Reproducir el día"}
+            onClick={() => onPlaying(!playing)}
+          >
+            {playing ? <PauseIcon /> : <PlayIcon />}
+            {playing ? "Pausar" : "Reproducir"}
+          </button>
         </div>
-        <button
-          type="button"
-          className="trend-play"
-          aria-pressed={playing}
-          aria-label={playing ? "Pausar la animación del día" : "Reproducir el día"}
-          onClick={() => onPlaying(!playing)}
-        >
-          {playing ? <PauseIcon /> : <PlayIcon />}
-          {playing ? "Pausar" : "Reproducir"}
-        </button>
+        <p className="trend-caption">
+          {seriesLabel}
+          <span className="trend-caption-time"> · {formatHour(hour)}</span>
+        </p>
       </header>
       <div className="trend-plot" ref={wrapRef}>
         <svg ref={svgRef} aria-hidden="true" />

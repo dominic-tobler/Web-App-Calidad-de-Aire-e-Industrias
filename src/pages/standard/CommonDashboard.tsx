@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { CommonWindRose } from "../../charts/CommonWindRose"
 import { HourlyTrend } from "../../charts/HourlyTrend"
 import { EMISSION_SOURCE_ALL, EMISSION_SOURCE_OPTIONS, industries } from "../../data/industries"
@@ -17,6 +17,7 @@ import {
 } from "../../data/observations"
 import { stations } from "../../data/stations"
 import {
+  AIR_QUALITY_LEVELS,
   airQualityLevel,
   formatReading,
   pollutantLabel,
@@ -52,7 +53,6 @@ import {
 } from "../../layouts/map/CundinamarcaMap"
 import { IndustryIcon } from "../../layouts/map/IndustryIcon"
 import { INDUSTRY_STATUS_STYLE } from "../../layouts/map/industryMarkers"
-import { StatusTip } from "../../layouts/PollutantTip"
 import { useCommonState } from "../../state/commonState"
 import { CalendarGrid } from "../../layouts/CalendarGrid"
 import { EmissionFilters } from "../../layouts/EmissionFilters"
@@ -90,13 +90,16 @@ export function CommonDashboard() {
     () => monthsWithReadings().filter((ref) => (YEARS as readonly number[]).includes(ref.year)),
     [observationsState],
   )
-  const calendarCursor = monthCursor(calendar)
-  const previousMonth = availableMonths.findLast((ref) => monthCursor(ref) < calendarCursor) ?? null
-  const nextMonth = availableMonths.find((ref) => monthCursor(ref) > calendarCursor) ?? null
-  const calendarNav = calendarNavText(observationsState, calendar, previousMonth, nextMonth)
-
-  function goToMonth(target: MonthRef | null) {
-    if (target) setCalendar({ year: target.year as Year, month: target.month })
+  function goToYear(year: Year) {
+    if (observationsState !== "ready") {
+      setCalendar({ year, month: calendar.month })
+      return
+    }
+    const inYear = availableMonths.filter((ref) => ref.year === year)
+    if (inYear.length === 0) return
+    const same = inYear.find((ref) => ref.month === calendar.month)
+    const target = same ?? nearestMonth(inYear, calendar.month)
+    setCalendar({ year, month: target.month })
   }
 
   const visibleIndustries = useMemo(
@@ -163,6 +166,15 @@ export function CommonDashboard() {
     () => daysWithReadings(state.pollutant, calendar.year, calendar.month),
     [observationsState, state.pollutant, calendar.year, calendar.month],
   )
+  const monthTones = useMemo(() => {
+    const tones = new Map<number, MonthTone>()
+    if (observationsState !== "ready") return tones
+    for (const ref of availableMonths) {
+      const values = Object.values(dailyAverageReadings(state.pollutant, ref.year, ref.month))
+      tones.set(monthCursor(ref), { days: values.length, level: usualMonthLevel(state.pollutant, values) })
+    }
+    return tones
+  }, [availableMonths, observationsState, state.pollutant])
   const dayLevels = useMemo(
     () => monthDayLevels(state.pollutant, calendar.year, calendar.month),
     [observationsState, state.pollutant, calendar.year, calendar.month],
@@ -253,6 +265,16 @@ export function CommonDashboard() {
             onPollutant={setPollutant}
           />
           <section className="calendar-block">
+            <MonthPicker
+              year={calendar.year}
+              month={calendar.month}
+              ready={observationsState === "ready"}
+              availableMonths={availableMonths}
+              tones={monthTones}
+              pollutant={state.pollutant}
+              onYear={goToYear}
+              onMonth={(month) => setCalendar({ year: calendar.year, month })}
+            />
             <CalendarGrid
               year={calendar.year}
               month={calendar.month}
@@ -260,13 +282,6 @@ export function CommonDashboard() {
               markedDays={markedDays}
               dayLevels={dayLevels}
               onDay={(day) => setDate(calendar.year, calendar.month, day)}
-              onPreviousMonth={() => goToMonth(previousMonth)}
-              onNextMonth={() => goToMonth(nextMonth)}
-              previousMonthDisabled={previousMonth == null}
-              nextMonthDisabled={nextMonth == null}
-              previousMonthLabel={calendarNav.previous}
-              nextMonthLabel={calendarNav.next}
-              notice={calendarNav.notice}
             />
             <p className="day-level-status">
               {dayAverage == null ? (
@@ -305,7 +320,7 @@ export function CommonDashboard() {
                   ? formatPlace(municipality.name)
                   : "Estación o municipio"}
             </h2>
-            <p>
+            <p className={selectedStation || municipality ? undefined : "station-cue"}>
               {selectedStation
                 ? `${stationPlace(selectedStation)} · ${stationStatusLabel(selectedStation)}`
                 : municipality
@@ -428,7 +443,198 @@ export function CommonDashboard() {
   )
 }
 
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg className={open ? "month-caret is-open" : "month-caret"} viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 6.25 8 11.25 13 6.25" />
+    </svg>
+  )
+}
+
 const SOURCE_LIST_LIMIT = 4
+const DARK_MONTH_INK = new Set(["buena", "moderada", "sensibles"])
+
+type MonthTone = { days: number; level: AirQualityLevel | null }
+
+function MonthPicker({
+  year,
+  month,
+  ready,
+  availableMonths,
+  tones,
+  pollutant,
+  onYear,
+  onMonth,
+}: {
+  year: Year
+  month: number
+  ready: boolean
+  availableMonths: readonly MonthRef[]
+  tones: ReadonlyMap<number, MonthTone>
+  pollutant: Pollutant
+  onYear: (year: Year) => void
+  onMonth: (month: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const monthsThisYear = new Set(
+    availableMonths.filter((ref) => ref.year === year).map((ref) => ref.month),
+  )
+
+  useEffect(() => {
+    if (!open) return
+    const close = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false)
+    }
+    window.addEventListener("pointerdown", close)
+    window.addEventListener("keydown", onKey)
+    return () => {
+      window.removeEventListener("pointerdown", close)
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="month-picker" ref={rootRef}>
+      <button
+        type="button"
+        className={open ? "month-picker-button is-open" : "month-picker-button"}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((current) => !current)}
+      >
+        {MONTHS[month]} {year}
+        <Caret open={open} />
+      </button>
+      {open ? (
+        <div className="month-picker-panel" role="dialog" aria-label="Elegir año y mes">
+          <div className="year-switch" role="group" aria-label="Año">
+            {YEARS.map((option) => {
+              const hasData = availableMonths.some((ref) => ref.year === option)
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={option === year ? "is-selected" : undefined}
+                  aria-pressed={option === year}
+                  aria-disabled={ready && !hasData}
+                  onClick={() => {
+                    if (ready && !hasData) return
+                    onYear(option)
+                  }}
+                >
+                  {option}
+                </button>
+              )
+            })}
+          </div>
+          <div className="month-grid" role="group" aria-label={`Meses de ${year}`}>
+            {MONTHS.map((name, index) => {
+              const available = !ready || monthsThisYear.has(index)
+              const tone = tones.get(year * 12 + index)
+              const selected = index === month
+              const label = monthChoiceLabel(name, year, pollutant, ready, available, tone)
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  className={monthChipClass(selected, tone?.level)}
+                  style={monthChipStyle(selected, tone?.level)}
+                  aria-pressed={selected}
+                  aria-disabled={!available}
+                  aria-label={available ? label : `${name} de ${year}, mes sin datos`}
+                  title={available ? label : "Mes sin datos"}
+                  onClick={() => {
+                    if (!available) return
+                    onMonth(index)
+                    setOpen(false)
+                  }}
+                >
+                  {name.slice(0, 3)}
+                </button>
+              )
+            })}
+          </div>
+          <p className="month-picker-hint">El color es el nivel más habitual.</p>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function monthChipClass(selected: boolean, level: AirQualityLevel | null | undefined): string {
+  const classes = ["month-chip"]
+  if (level) classes.push("has-level")
+  if (selected) classes.push("is-selected")
+  return classes.join(" ")
+}
+
+function monthChipStyle(
+  selected: boolean,
+  level: AirQualityLevel | null | undefined,
+): CSSProperties | undefined {
+  if (!level && !selected) return undefined
+  return {
+    backgroundColor: level?.color,
+    color: level && !DARK_MONTH_INK.has(level.id) ? "#ffffff" : undefined,
+    boxShadow: selected
+      ? level
+        ? "inset 0 0 0 2px #ffffff, inset 0 0 0 4px #1a2420"
+        : "inset 0 0 0 2px #1a2420"
+      : undefined,
+  }
+}
+
+function monthChoiceLabel(
+  name: string,
+  year: number,
+  pollutant: Pollutant,
+  ready: boolean,
+  available: boolean,
+  tone: MonthTone | undefined,
+): string {
+  const when = `${name} de ${year}`
+  if (!ready) return `${when}, cargando mediciones`
+  if (!available) return `${when}, sin mediciones`
+  if (!tone || tone.days === 0) return `${when}, sin mediciones de ${pollutantLabel(pollutant)}`
+  if (!tone.level) return `${when}, con mediciones sin categoría ICA`
+  return `${when}, nivel más habitual: ${tone.level.label}`
+}
+
+function usualMonthLevel(pollutant: Pollutant, values: readonly number[]): AirQualityLevel | null {
+  const counts = new Map<string, { level: AirQualityLevel; count: number; rank: number }>()
+  for (const value of values) {
+    const level = airQualityLevel(pollutant, value)
+    if (!level) continue
+    const rank = AIR_QUALITY_LEVELS.findIndex((item) => item.id === level.id)
+    const current = counts.get(level.id)
+    if (current) current.count += 1
+    else counts.set(level.id, { level, count: 1, rank })
+  }
+  let best: { level: AirQualityLevel; count: number; rank: number } | null = null
+  for (const entry of counts.values()) {
+    if (
+      !best ||
+      entry.count > best.count ||
+      (entry.count === best.count && entry.rank > best.rank)
+    ) {
+      best = entry
+    }
+  }
+  return best?.level ?? null
+}
+
+function nearestMonth(months: readonly MonthRef[], month: number): MonthRef {
+  return months.reduce((best, ref) => {
+    const distance = Math.abs(ref.month - month)
+    const bestDistance = Math.abs(best.month - month)
+    if (distance < bestDistance || (distance === bestDistance && ref.month < best.month)) return ref
+    return best
+  })
+}
 
 function StatusCounts({ counts }: { counts: { sancionada: number; seguimiento: number } }) {
   return (
@@ -441,7 +647,6 @@ function StatusCounts({ counts }: { counts: { sancionada: number; seguimiento: n
         <IndustryIcon style={INDUSTRY_STATUS_STYLE.seguimiento} />
         {counts.seguimiento} en seguimiento
       </span>
-      <StatusTip />
     </p>
   )
 }
@@ -492,52 +697,6 @@ function municipalitySubtitle(municipality: MunicipalityRef): string {
 
 function monthCursor(ref: MonthRef): number {
   return ref.year * 12 + ref.month
-}
-
-function monthName(ref: MonthRef): string {
-  return `${MONTHS[ref.month].toLocaleLowerCase("es")} de ${ref.year}`
-}
-
-// "Entre junio y diciembre de 2024", "Entre junio de 2024 y febrero de 2025" o "En junio de 2024".
-function gapName(fromCursor: number, toCursor: number): string {
-  const from = { year: Math.floor(fromCursor / 12), month: fromCursor % 12 }
-  const to = { year: Math.floor(toCursor / 12), month: toCursor % 12 }
-  if (fromCursor === toCursor) return `En ${monthName(from)}`
-  if (from.year === to.year) return `Entre ${MONTHS[from.month].toLocaleLowerCase("es")} y ${monthName(to)}`
-  return `Entre ${monthName(from)} y ${monthName(to)}`
-}
-
-function calendarNavText(
-  observationsState: "loading" | "ready" | "error",
-  current: MonthRef,
-  previous: MonthRef | null,
-  next: MonthRef | null,
-): { previous: string; next: string; notice: string | null } {
-  if (observationsState !== "ready") {
-    const waiting = observationsState === "loading" ? "Cargando los meses con datos" : "No se pudieron leer los meses con datos"
-    return { previous: waiting, next: waiting, notice: null }
-  }
-  const cursor = monthCursor(current)
-  const notices: string[] = []
-  if (next && monthCursor(next) > cursor + 1) {
-    notices.push(
-      `${gapName(cursor + 1, monthCursor(next) - 1)} las estaciones no tienen registros, así que el siguiente mes es ${monthName(next)}.`,
-    )
-  }
-  if (previous && monthCursor(previous) < cursor - 1) {
-    notices.push(
-      `${gapName(monthCursor(previous) + 1, cursor - 1)} las estaciones no tienen registros, así que el mes anterior es ${monthName(previous)}.`,
-    )
-  }
-  return {
-    previous: previous
-      ? `Ir a ${monthName(previous)}`
-      : `Las estaciones no tienen registros antes de ${monthName(current)}`,
-    next: next
-      ? `Ir a ${monthName(next)}`
-      : `Las estaciones no tienen registros después de ${monthName(current)}`,
-    notice: notices.length > 0 ? notices.join(" ") : null,
-  }
 }
 
 function monthDayLevels(
